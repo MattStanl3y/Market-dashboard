@@ -23,6 +23,31 @@ export interface MarketOverview {
   }
 }
 
+export interface NewsArticle {
+  title: string
+  description: string
+  url: string
+  published_at: string
+  source: string
+  content: string
+}
+
+export interface NewsAnalysis {
+  summary: string
+  sentiment: 'bullish' | 'bearish' | 'neutral'
+  sentiment_score: number
+  key_points: string[]
+  reasoning: string
+  article_count: number
+}
+
+export interface NewsInsights {
+  symbol: string
+  analysis: NewsAnalysis
+  raw_articles: NewsArticle[]
+  last_updated: string
+}
+
 class ApiClient {
   private async request<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`)
@@ -41,6 +66,10 @@ class ApiClient {
 
   async getMarketOverview(): Promise<MarketOverview> {
     return this.request<MarketOverview>('/api/market/overview')
+  }
+
+  async getNewsInsights(symbol: string): Promise<NewsInsights> {
+    return this.request<NewsInsights>(`/api/news/${symbol}`)
   }
 }
 
