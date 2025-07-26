@@ -18,10 +18,33 @@ interface StockData {
 
 interface StockCardProps {
   data: StockData
+  period?: string
+  chartData?: any
 }
 
-export default function StockCard({ data }: StockCardProps) {
+export default function StockCard({ data, period = '1y', chartData }: StockCardProps) {
   const isPositive = data.change >= 0
+  
+  // Get dynamic high/low labels and values
+  const getHighLowLabel = () => {
+    switch (period) {
+      case '1d': return 'Today\'s'
+      case '1w': return 'Week'
+      case '3m': return '3M'
+      case '1y': return '1Y'
+      default: return '1Y'
+    }
+  }
+  
+  const getPeriodHigh = () => {
+    if (chartData?.period_high) return chartData.period_high
+    return data['52_week_high'] || 0
+  }
+  
+  const getPeriodLow = () => {
+    if (chartData?.period_low) return chartData.period_low
+    return data['52_week_low'] || 0
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 border">
@@ -71,15 +94,15 @@ export default function StockCard({ data }: StockCardProps) {
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">52W High</p>
+          <p className="text-sm text-gray-500">{getHighLowLabel()} High</p>
           <p className="font-semibold">
-            {data['52_week_high'] ? formatCurrency(data['52_week_high']) : 'N/A'}
+            {getPeriodHigh() ? formatCurrency(getPeriodHigh()) : 'N/A'}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-500">52W Low</p>
+          <p className="text-sm text-gray-500">{getHighLowLabel()} Low</p>
           <p className="font-semibold">
-            {data['52_week_low'] ? formatCurrency(data['52_week_low']) : 'N/A'}
+            {getPeriodLow() ? formatCurrency(getPeriodLow()) : 'N/A'}
           </p>
         </div>
       </div>

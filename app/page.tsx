@@ -4,11 +4,14 @@ import { useState } from 'react'
 import SearchBar from '@/components/SearchBar'
 import StockCard from '@/components/StockCard'
 import AIInsights from '@/components/AIInsights'
+import StockChart from '@/components/StockChart'
 import { apiClient, type StockData } from '@/lib/api'
 
 export default function Home() {
   const [stockData, setStockData] = useState<StockData | null>(null)
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null)
+  const [currentPeriod, setCurrentPeriod] = useState<string>('1y')
+  const [chartData, setChartData] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,7 +54,11 @@ export default function Home() {
         {/* Stock Data Display */}
         {stockData && !loading && (
           <div className="mb-8">
-            <StockCard data={stockData} />
+            <StockCard 
+              data={stockData} 
+              period={currentPeriod}
+              chartData={chartData}
+            />
           </div>
         )}
         
@@ -66,10 +73,13 @@ export default function Home() {
           
           {/* Center Panel - Charts */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Stock Chart</h2>
-              <p className="text-gray-500">Interactive charts coming soon...</p>
-            </div>
+            <StockChart 
+              symbol={currentSymbol || undefined} 
+              onPeriodChange={(period, data) => {
+                setCurrentPeriod(period)
+                setChartData(data)
+              }}
+            />
           </div>
           
           {/* Right Panel - AI Insights */}

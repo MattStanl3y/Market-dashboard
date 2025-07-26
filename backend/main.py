@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 from newsapi import NewsApiClient
 from datetime import datetime, timedelta
 import openai
+from typing import Optional
 
 load_dotenv()
+
+# Simple in-memory cache for chart data
+chart_cache = {}
 
 app = FastAPI(title="Market Dashboard API", version="1.0.0")
 
@@ -62,6 +66,177 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             
     except Exception as e:
         raise Exception(f"Alpha Vantage API error: {str(e)}")
+
+
+async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: str = None):
+    """Fetch historical stock data from Alpha Vantage API"""
+    import httpx
+    
+    if api_key is None:
+        api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+        if not api_key:
+            raise Exception("Alpha Vantage API key not found in environment variables")
+    
+    # Check cache first (cache for 1 hour)
+    cache_key = f"{symbol}_{period}"
+    if cache_key in chart_cache:
+        cached_data, cached_time = chart_cache[cache_key]
+        if datetime.now() - cached_time < timedelta(hours=1):
+            return cached_data
+    
+    try:
+        # For 1D period, use intraday data (30min intervals)
+        if period == "1d":
+            url = f"https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval=30min&outputsize=full&apikey={api_key}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=30)
+                data = response.json()
+                
+                print(f"Alpha Vantage 1D response keys: {list(data.keys())}")  # Debug
+                print(f"Alpha Vantage 1D response: {data}")  # Debug
+                
+                if "Time Series (30min)" not in data:
+                    if "Error Message" in data:
+                        raise Exception(data["Error Message"])
+                    elif "Note" in data:
+                        raise Exception("API call frequency limit reached. Please try again later.")
+                    elif "Information" in data:
+                        raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                    else:
+                        raise Exception(f"Invalid 1D response from Alpha Vantage. Got keys: {list(data.keys())}")
+                
+                time_series = data["Time Series (30min)"]
+                
+                # Convert to list format
+                chart_data = []
+                for datetime_str, values in time_series.items():
+                    chart_data.append({
+                        "date": datetime_str,
+                        "open": float(values["1. open"]),
+                        "high": float(values["2. high"]),
+                        "low": float(values["3. low"]),
+                        "close": float(values["4. close"]),
+                        "volume": int(values["5. volume"])
+                    })
+                
+                # Sort by datetime (oldest first)
+                chart_data.sort(key=lambda x: x["date"])
+                
+                # Filter to current trading day (9:30 AM - 4:00 PM EST)
+                import pytz
+                
+                est = pytz.timezone('US/Eastern')
+                now_est = datetime.now(est)
+                
+                # Get current date in EST
+                current_date = now_est.date()
+                
+                # Define trading hours (9:30 AM - 4:00 PM EST)
+                market_open = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=9, minute=30)))
+                market_close = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=16, minute=0)))
+                
+                # If market is closed or it's weekend, use previous trading day
+                if now_est.weekday() >= 5:  # Weekend
+                    # Go back to Friday
+                    days_back = now_est.weekday() - 4
+                    current_date = current_date - timedelta(days=days_back)
+                    market_open = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=9, minute=30)))
+                    market_close = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=16, minute=0)))
+                elif now_est < market_open:  # Before market opens today
+                    # Use previous trading day
+                    if now_est.weekday() == 0:  # Monday, go back to Friday
+                        current_date = current_date - timedelta(days=3)
+                    else:
+                        current_date = current_date - timedelta(days=1)
+                    market_open = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=9, minute=30)))
+                    market_close = est.localize(datetime.combine(current_date, datetime.min.time().replace(hour=16, minute=0)))
+                
+                # Filter data to trading hours of the target date
+                filtered_data = []
+                for item in chart_data:
+                    item_dt = datetime.strptime(item["date"], "%Y-%m-%d %H:%M:%S")
+                    item_dt_est = pytz.UTC.localize(item_dt).astimezone(est)
+                    
+                    if market_open <= item_dt_est <= market_close:
+                        filtered_data.append(item)
+                
+        else:
+            # Use TIME_SERIES_DAILY for other periods
+            url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&outputsize=full&apikey={api_key}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=30)
+                data = response.json()
+                
+                print(f"Alpha Vantage Daily response keys: {list(data.keys())}")  # Debug
+                print(f"Alpha Vantage Daily response: {data}")  # Debug
+                
+                if "Time Series (Daily)" not in data:
+                    if "Error Message" in data:
+                        raise Exception(data["Error Message"])
+                    elif "Note" in data:
+                        raise Exception("API call frequency limit reached. Please try again later.")
+                    elif "Information" in data:
+                        raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                    else:
+                        raise Exception(f"Invalid Daily response from Alpha Vantage. Got keys: {list(data.keys())}")
+                
+                time_series = data["Time Series (Daily)"]
+                
+                # Convert to list format and sort by date
+                chart_data = []
+                for date_str, values in time_series.items():
+                    chart_data.append({
+                        "date": date_str,
+                        "open": float(values["1. open"]),
+                        "high": float(values["2. high"]),
+                        "low": float(values["3. low"]),
+                        "close": float(values["4. close"]),
+                        "volume": int(values["5. volume"])
+                    })
+                
+                # Sort by date (oldest first)
+                chart_data.sort(key=lambda x: x["date"])
+                
+                # Filter by period
+                end_date = datetime.now()
+                if period == "1w":
+                    start_date = end_date - timedelta(days=7)
+                elif period == "3m":
+                    start_date = end_date - timedelta(days=90)
+                elif period == "1y":
+                    start_date = end_date - timedelta(days=365)
+                else:  # Default to 1 year
+                    start_date = end_date - timedelta(days=365)
+                
+                filtered_data = [
+                    item for item in chart_data 
+                    if datetime.strptime(item["date"], "%Y-%m-%d") >= start_date
+                ]
+        
+        # Calculate period high/low from the filtered data
+        if filtered_data:
+            period_high = max(item['high'] for item in filtered_data)
+            period_low = min(item['low'] for item in filtered_data)
+        else:
+            period_high = 0
+            period_low = 0
+        
+        # Add period high/low to the response data
+        result_data = {
+            "data": filtered_data,
+            "period_high": period_high,
+            "period_low": period_low
+        }
+        
+        # Cache the result
+        chart_cache[cache_key] = (result_data, datetime.now())
+        
+        return result_data
+            
+    except Exception as e:
+        raise Exception(f"Alpha Vantage history API error: {str(e)}")
 
 
 async def fetch_news_for_symbol(symbol: str, api_key: str = None):
@@ -389,6 +564,38 @@ async def get_news_insights(symbol: str):
         return JSONResponse(
             status_code=400,
             content={"error": f"Failed to fetch news insights for {symbol}: {str(e)}"}
+        )
+
+@app.get("/api/stock/{symbol}/history")
+async def get_stock_history(symbol: str, period: str = "1y"):
+    """Get historical stock data for charting"""
+    try:
+        # Validate period parameter
+        valid_periods = ["1d", "1w", "3m", "1y"]
+        if period not in valid_periods:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Invalid period. Must be one of: {', '.join(valid_periods)}"}
+            )
+        
+        # Fetch historical data
+        history_data = await fetch_alpha_vantage_history(symbol.upper(), period)
+        
+        response = {
+            "symbol": symbol.upper(),
+            "period": period,
+            "data": history_data["data"],
+            "data_points": len(history_data["data"]),
+            "period_high": history_data["period_high"],
+            "period_low": history_data["period_low"]
+        }
+        
+        return response
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Failed to fetch historical data for {symbol}: {str(e)}"}
         )
 
 if __name__ == "__main__":

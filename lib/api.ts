@@ -48,6 +48,24 @@ export interface NewsInsights {
   last_updated: string
 }
 
+export interface ChartDataPoint {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface HistoricalData {
+  symbol: string
+  period: string
+  data: ChartDataPoint[]
+  data_points: number
+  period_high: number
+  period_low: number
+}
+
 class ApiClient {
   private async request<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`)
@@ -70,6 +88,10 @@ class ApiClient {
 
   async getNewsInsights(symbol: string): Promise<NewsInsights> {
     return this.request<NewsInsights>(`/api/news/${symbol}`)
+  }
+
+  async getStockHistory(symbol: string, period: string = '1y'): Promise<HistoricalData> {
+    return this.request<HistoricalData>(`/api/stock/${symbol}/history?period=${period}`)
   }
 }
 
