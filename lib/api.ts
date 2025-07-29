@@ -12,6 +12,16 @@ export interface StockData {
   '52_week_high'?: number
   '52_week_low'?: number
   historical_data?: any[]
+  // Additional overview data
+  peg_ratio?: number
+  book_value?: number
+  dividend_per_share?: number
+  dividend_yield?: number
+  eps?: number
+  beta?: number
+  sector?: string
+  industry?: string
+  description?: string
 }
 
 export interface MarketOverview {
@@ -66,6 +76,35 @@ export interface HistoricalData {
   period_low: number
 }
 
+export interface TrendingStock {
+  symbol: string
+  reason: string
+  sentiment: 'bullish' | 'bearish' | 'neutral'
+}
+
+export interface HighImpactEvent {
+  event: string
+  impact: 'high' | 'medium' | 'low'
+  timeframe: string
+}
+
+export interface MarketAnalysis {
+  market_sentiment: 'bullish' | 'bearish' | 'neutral'
+  trending_stocks: TrendingStock[]
+  key_themes: string[]
+  daily_summary: string
+  high_impact_events: HighImpactEvent[]
+  article_count: number
+  last_updated: string
+}
+
+export interface MarketInsights {
+  analysis: MarketAnalysis
+  raw_articles: NewsArticle[]
+  last_updated: string
+  days_back: number
+}
+
 class ApiClient {
   private async request<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`)
@@ -92,6 +131,10 @@ class ApiClient {
 
   async getStockHistory(symbol: string, period: string = '1y'): Promise<HistoricalData> {
     return this.request<HistoricalData>(`/api/stock/${symbol}/history?period=${period}`)
+  }
+
+  async getMarketInsights(daysBack: number = 1): Promise<MarketInsights> {
+    return this.request<MarketInsights>(`/api/market/insights?days_back=${daysBack}`)
   }
 }
 

@@ -20,9 +20,49 @@ interface StockCardProps {
   data: StockData
   period?: string
   chartData?: any
+  loading?: boolean
 }
 
-export default function StockCard({ data, period = '1y', chartData }: StockCardProps) {
+// Loading skeleton component
+function StockCardSkeleton() {
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 border animate-pulse">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <div className="h-6 bg-gray-200 rounded w-20 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-32"></div>
+        </div>
+        <div className="h-6 bg-gray-200 rounded w-16"></div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div className="h-8 bg-gray-200 rounded w-24 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-20"></div>
+        </div>
+        <div className="text-right">
+          <div className="h-4 bg-gray-200 rounded w-12 mb-1 ml-auto"></div>
+          <div className="h-5 bg-gray-200 rounded w-16 ml-auto"></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i}>
+            <div className="h-3 bg-gray-200 rounded w-16 mb-1"></div>
+            <div className="h-4 bg-gray-200 rounded w-12"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function StockCard({ data, period = '1y', chartData, loading = false }: StockCardProps) {
+  if (loading) {
+    return <StockCardSkeleton />
+  }
+
   const isPositive = data.change >= 0
   
   // Get dynamic high/low labels and values
@@ -105,7 +145,51 @@ export default function StockCard({ data, period = '1y', chartData }: StockCardP
             {getPeriodLow() ? formatCurrency(getPeriodLow()) : 'N/A'}
           </p>
         </div>
+        {data.eps && (
+          <div>
+            <p className="text-sm text-gray-500">EPS</p>
+            <p className="font-semibold">{data.eps.toFixed(2)}</p>
+          </div>
+        )}
+        {data.beta && (
+          <div>
+            <p className="text-sm text-gray-500">Beta</p>
+            <p className="font-semibold">{data.beta.toFixed(2)}</p>
+          </div>
+        )}
+        {data.dividend_yield && data.dividend_yield > 0 && (
+          <div>
+            <p className="text-sm text-gray-500">Dividend Yield</p>
+            <p className="font-semibold">{(data.dividend_yield * 100).toFixed(2)}%</p>
+          </div>
+        )}
+        {data.peg_ratio && (
+          <div>
+            <p className="text-sm text-gray-500">PEG Ratio</p>
+            <p className="font-semibold">{data.peg_ratio.toFixed(2)}</p>
+          </div>
+        )}
       </div>
+      
+      {/* Company Info Section */}
+      {(data.sector || data.industry) && (
+        <div className="pt-4 border-t border-gray-200 mt-4">
+          <div className="grid grid-cols-1 gap-2">
+            {data.sector && (
+              <div>
+                <p className="text-sm text-gray-500">Sector</p>
+                <p className="text-sm font-medium text-gray-700">{data.sector}</p>
+              </div>
+            )}
+            {data.industry && (
+              <div>
+                <p className="text-sm text-gray-500">Industry</p>
+                <p className="text-sm font-medium text-gray-700">{data.industry}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

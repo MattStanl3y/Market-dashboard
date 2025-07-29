@@ -28,6 +28,79 @@ async def root():
     return {"message": "Market Dashboard API is running"}
 
 
+async def fetch_alpha_vantage_overview(symbol: str, api_key: str = None):
+    """Fetch company overview data from Alpha Vantage API"""
+    import httpx
+    
+    if api_key is None:
+        api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+        if not api_key:
+            raise Exception("Alpha Vantage API key not found in environment variables")
+    
+    try:
+        overview_url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={api_key}"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(overview_url, timeout=15)
+            data = response.json()
+            
+            # Check for API errors
+            if "Error Message" in data:
+                raise Exception(data["Error Message"])
+            elif "Note" in data:
+                raise Exception("API call frequency limit reached. Please try again later.")
+            elif "Information" in data:
+                raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+            elif not data or data == {}:
+                raise Exception("No overview data available for this symbol")
+            
+            # Extract key financial metrics
+            def safe_float(value, default=None):
+                try:
+                    if value and value != "None" and value != "-":
+                        return float(value)
+                    return default
+                except (ValueError, TypeError):
+                    return default
+            
+            def safe_int(value, default=None):
+                try:
+                    if value and value != "None" and value != "-":
+                        return int(float(value))
+                    return default
+                except (ValueError, TypeError):
+                    return default
+            
+            return {
+                "company_name": data.get("Name", f"{symbol} Inc."),
+                "description": data.get("Description", ""),
+                "sector": data.get("Sector", ""),
+                "industry": data.get("Industry", ""),
+                "market_cap": safe_int(data.get("MarketCapitalization")),
+                "pe_ratio": safe_float(data.get("PERatio")),
+                "peg_ratio": safe_float(data.get("PEGRatio")),
+                "book_value": safe_float(data.get("BookValue")),
+                "dividend_per_share": safe_float(data.get("DividendPerShare")),
+                "dividend_yield": safe_float(data.get("DividendYield")),
+                "eps": safe_float(data.get("EPS")),
+                "revenue_per_share": safe_float(data.get("RevenuePerShareTTM")),
+                "profit_margin": safe_float(data.get("ProfitMargin")),
+                "operating_margin": safe_float(data.get("OperatingMarginTTM")),
+                "return_on_assets": safe_float(data.get("ReturnOnAssetsTTM")),
+                "return_on_equity": safe_float(data.get("ReturnOnEquityTTM")),
+                "revenue_ttm": safe_int(data.get("RevenueTTM")),
+                "gross_profit_ttm": safe_int(data.get("GrossProfitTTM")),
+                "ebitda": safe_int(data.get("EBITDA")),
+                "52_week_high": safe_float(data.get("52WeekHigh")),
+                "52_week_low": safe_float(data.get("52WeekLow")),
+                "beta": safe_float(data.get("Beta")),
+                "shares_outstanding": safe_int(data.get("SharesOutstanding"))
+            }
+            
+    except Exception as e:
+        raise Exception(f"Alpha Vantage overview API error: {str(e)}")
+
+
 async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
     """Fetch stock data from Alpha Vantage API"""
     import httpx
@@ -38,7 +111,7 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             raise Exception("Alpha Vantage API key not found in environment variables")
     
     try:
-        # Get quote data
+        # Get quote data and overview data in parallel
         quote_url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}"
         
         async with httpx.AsyncClient() as client:
@@ -46,23 +119,76 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             data = response.json()
             
             if "Global Quote" not in data:
-                raise Exception("Invalid response from Alpha Vantage")
+                if "Error Message" in data:
+                    raise Exception(data["Error Message"])
+                elif "Note" in data:
+                    raise Exception("API call frequency limit reached. Please try again later.")
+                elif "Information" in data:
+                    raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                else:
+                    raise Exception("Invalid response from Alpha Vantage")
                 
             quote = data["Global Quote"]
             
-            return {
+            # Try to get overview data for fundamental metrics
+            overview_data = None
+            try:
+                overview_data = await fetch_alpha_vantage_overview(symbol, api_key)
+            except Exception as overview_error:
+                print(f"Overview data failed for {symbol}: {overview_error}")
+                # Continue without overview data
+            
+            # Combine quote and overview data
+            result = {
                 "symbol": quote.get("01. symbol", symbol),
-                "company_name": f"{symbol} Inc.",  # Alpha Vantage doesn't provide company name in quote
+                "company_name": overview_data.get("company_name", f"{symbol} Inc.") if overview_data else f"{symbol} Inc.",
                 "current_price": float(quote.get("05. price", 0)),
                 "change": float(quote.get("09. change", 0)),
                 "change_percent": float(quote.get("10. change percent", "0%").replace("%", "")),
-                "market_cap": None,  # Not available in free tier
-                "pe_ratio": None,   # Not available in free tier
                 "volume": int(quote.get("06. volume", 0)),
                 "52_week_high": float(quote.get("03. high", 0)),
                 "52_week_low": float(quote.get("04. low", 0)),
                 "historical_data": []
             }
+            
+            # Add overview data if available
+            if overview_data:
+                result.update({
+                    "market_cap": overview_data.get("market_cap"),
+                    "pe_ratio": overview_data.get("pe_ratio"),
+                    "peg_ratio": overview_data.get("peg_ratio"),
+                    "book_value": overview_data.get("book_value"),
+                    "dividend_per_share": overview_data.get("dividend_per_share"),
+                    "dividend_yield": overview_data.get("dividend_yield"),
+                    "eps": overview_data.get("eps"),
+                    "beta": overview_data.get("beta"),
+                    "sector": overview_data.get("sector"),
+                    "industry": overview_data.get("industry"),
+                    "description": overview_data.get("description")
+                })
+                
+                # Use overview 52-week high/low if available (more accurate)
+                if overview_data.get("52_week_high"):
+                    result["52_week_high"] = overview_data["52_week_high"]
+                if overview_data.get("52_week_low"):
+                    result["52_week_low"] = overview_data["52_week_low"]
+            else:
+                # Fallback values when overview is not available
+                result.update({
+                    "market_cap": None,
+                    "pe_ratio": None,
+                    "peg_ratio": None,
+                    "book_value": None,
+                    "dividend_per_share": None,
+                    "dividend_yield": None,
+                    "eps": None,
+                    "beta": None,
+                    "sector": None,
+                    "industry": None,
+                    "description": None
+                })
+            
+            return result
             
     except Exception as e:
         raise Exception(f"Alpha Vantage API error: {str(e)}")
@@ -385,6 +511,273 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
         raise Exception(f"News API error: {str(e)}")
 
 
+async def fetch_market_news(api_key: str = None, days_back: int = 1):
+    """Fetch general market news for AI analysis of trending stocks and events"""
+    if api_key is None:
+        api_key = os.getenv("NEWS_API_KEY")
+        if not api_key:
+            # Return mock market news for development
+            return [
+                {
+                    "title": "Tesla Reports Record Q4 Earnings, Stock Jumps 8% in After-Hours Trading",
+                    "description": "Electric vehicle maker Tesla exceeded analyst expectations with strong quarterly results, boosting investor confidence.",
+                    "url": "https://example.com/tesla-earnings",
+                    "published_at": "2024-01-25T16:30:00Z",
+                    "source": "Reuters",
+                    "content": "Tesla Inc. reported record quarterly earnings...",
+                    "mentions": ["TSLA"]
+                },
+                {
+                    "title": "Fed Signals Potential Rate Cuts as Inflation Cools",
+                    "description": "Federal Reserve officials hint at possible interest rate reductions following lower-than-expected inflation data.",
+                    "url": "https://example.com/fed-rates",
+                    "published_at": "2024-01-25T14:20:00Z",
+                    "source": "Wall Street Journal",
+                    "content": "The Federal Reserve is considering rate cuts...",
+                    "mentions": ["SPY", "QQQ", "DJI"]
+                },
+                {
+                    "title": "Microsoft and OpenAI Partnership Deepens with $10B Investment",
+                    "description": "Microsoft announces expanded partnership with OpenAI, investing billions more in AI development and integration.",
+                    "url": "https://example.com/msft-openai",
+                    "published_at": "2024-01-25T11:45:00Z",
+                    "source": "Bloomberg",
+                    "content": "Microsoft Corp. is expanding its relationship with OpenAI...",
+                    "mentions": ["MSFT", "GOOGL", "NVDA"]
+                },
+                {
+                    "title": "Amazon Web Services Launches New AI Cloud Services",
+                    "description": "Amazon's cloud division unveils suite of AI tools to compete with Microsoft and Google in enterprise AI market.",
+                    "url": "https://example.com/aws-ai",
+                    "published_at": "2024-01-25T09:15:00Z",
+                    "source": "CNBC",
+                    "content": "Amazon Web Services announced new AI capabilities...",
+                    "mentions": ["AMZN", "MSFT", "GOOGL"]
+                },
+                {
+                    "title": "Apple Earnings Preview: iPhone Sales in Focus Amid China Concerns",
+                    "description": "Analysts expect Apple's upcoming earnings to reveal impact of China market challenges on iPhone revenue.",
+                    "url": "https://example.com/aapl-earnings-preview",
+                    "published_at": "2024-01-25T08:00:00Z",
+                    "source": "MarketWatch",
+                    "content": "Apple Inc. is set to report quarterly earnings next week...",
+                    "mentions": ["AAPL"]
+                }
+            ]
+    
+    try:
+        newsapi = NewsApiClient(api_key=api_key)
+        
+        # Get news from specified days back
+        to_date = datetime.now()
+        from_date = to_date - timedelta(days=days_back)
+        
+        # Market-focused search terms
+        market_searches = [
+            "earnings OR revenue OR profit OR quarterly results",
+            "stock market OR trading OR NYSE OR NASDAQ",
+            "Federal Reserve OR interest rates OR inflation",
+            "merger OR acquisition OR deal OR partnership",
+            "IPO OR stock debut OR public offering",
+            "analyst upgrade OR downgrade OR price target",
+            "CEO OR executive OR leadership change",
+            "regulation OR SEC OR antitrust"
+        ]
+        
+        all_articles = []
+        
+        for search_term in market_searches:
+            try:
+                articles = newsapi.get_everything(
+                    q=search_term,
+                    language='en',
+                    sort_by='publishedAt',
+                    from_param=from_date.strftime('%Y-%m-%d'),
+                    to=to_date.strftime('%Y-%m-%d'),
+                    page_size=15,
+                    domains='reuters.com,bloomberg.com,wsj.com,marketwatch.com,cnbc.com,yahoo.com,benzinga.com,forbes.com,barrons.com'
+                )
+                
+                if articles.get('articles'):
+                    for article in articles['articles']:
+                        title = article.get('title', '').lower()
+                        description = article.get('description', '').lower()
+                        content = article.get('content', '') or article.get('description', '')
+                        
+                        # Extract mentioned stock symbols (basic regex)
+                        import re
+                        symbol_pattern = r'\b([A-Z]{1,5})\b'
+                        mentioned_symbols = []
+                        
+                        # Look for stock symbols in title and description
+                        text_to_search = f"{title} {description}".upper()
+                        potential_symbols = re.findall(symbol_pattern, text_to_search)
+                        
+                        # Filter to likely stock symbols (3-5 chars, exclude common words)
+                        exclude_words = {'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER', 'WAS', 'ONE', 'OUR', 'HAD', 'BUT', 'CEO', 'CFO', 'IPO', 'SEC', 'FDA', 'API', 'USA', 'NYSE', 'ETF'}
+                        for symbol in potential_symbols:
+                            if len(symbol) >= 3 and len(symbol) <= 5 and symbol not in exclude_words:
+                                mentioned_symbols.append(symbol)
+                        
+                        # Check for financial keywords to ensure relevance
+                        financial_keywords = ['stock', 'share', 'earnings', 'revenue', 'profit', 'quarter', 
+                                            'analyst', 'price', 'target', 'upgrade', 'downgrade', 'trading',
+                                            'market', 'investor', 'billion', 'million', 'ceo', 'merger',
+                                            'acquisition', 'ipo', 'sec', 'fed', 'rates']
+                        
+                        if any(keyword in title or keyword in description for keyword in financial_keywords):
+                            all_articles.append({
+                                'title': article.get('title', ''),
+                                'description': article.get('description', ''),
+                                'url': article.get('url', ''),
+                                'published_at': article.get('publishedAt', ''),
+                                'source': article.get('source', {}).get('name', ''),
+                                'content': content[:500] if content else '',
+                                'mentions': list(set(mentioned_symbols))  # Remove duplicates
+                            })
+                            
+            except Exception as search_error:
+                print(f"Error searching market news for {search_term}: {search_error}")
+                continue
+        
+        # Remove duplicates and sort by publish date
+        seen_urls = set()
+        unique_articles = []
+        for article in sorted(all_articles, key=lambda x: x['published_at'], reverse=True):
+            if article['url'] not in seen_urls and len(unique_articles) < 25:
+                seen_urls.add(article['url'])
+                unique_articles.append(article)
+        
+        return unique_articles
+        
+    except Exception as e:
+        raise Exception(f"Market news API error: {str(e)}")
+
+
+async def analyze_market_trends_with_openai(articles: list, api_key: str = None):
+    """Use OpenAI to analyze market news and extract trending stocks and themes"""
+    if api_key is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise Exception("OpenAI API key not found in environment variables")
+    
+    if not articles:
+        return {
+            "market_sentiment": "neutral",
+            "trending_stocks": [],
+            "key_themes": [],
+            "daily_summary": "No recent market news found.",
+            "high_impact_events": []
+        }
+    
+    try:
+        # Prepare news content for analysis (limit for token efficiency)
+        news_content = ""
+        stock_mentions = {}
+        
+        for i, article in enumerate(articles[:15], 1):  # Limit to 15 articles
+            news_content += f"\nArticle {i}:\n"
+            news_content += f"Title: {article['title']}\n"
+            news_content += f"Description: {article['description']}\n"
+            news_content += f"Source: {article['source']}\n"
+            
+            # Count stock mentions
+            for symbol in article.get('mentions', []):
+                stock_mentions[symbol] = stock_mentions.get(symbol, 0) + 1
+        
+        # Create OpenAI client
+        client = openai.OpenAI(api_key=api_key)
+        
+        prompt = f"""
+You are a financial market analyst. Analyze these recent financial news articles and respond with ONLY valid JSON in this exact format:
+
+{{
+    "market_sentiment": "bullish" or "bearish" or "neutral",
+    "trending_stocks": [
+        {{"symbol": "AAPL", "reason": "Strong earnings report", "sentiment": "bullish"}},
+        {{"symbol": "TSLA", "reason": "Production concerns", "sentiment": "bearish"}}
+    ],
+    "key_themes": ["AI partnerships", "Interest rate changes", "Earnings season"],
+    "daily_summary": "2-3 sentence summary of key market developments",
+    "high_impact_events": [
+        {{"event": "Fed meeting", "impact": "high", "timeframe": "this week"}},
+        {{"event": "Apple earnings", "impact": "medium", "timeframe": "next week"}}
+    ]
+}}
+
+IMPORTANT: 
+- Respond ONLY with valid JSON
+- No additional text before or after
+- Focus on actionable insights for traders
+- Identify 3-5 most mentioned/relevant stocks
+- Highlight upcoming events that could move markets
+
+Recent Financial News:
+{news_content}
+
+Stock mentions in articles: {dict(list(stock_mentions.items())[:10])}
+"""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a financial analyst. Respond ONLY with valid JSON. No extra text."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=800,
+            temperature=0.2
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        print(f"OpenAI Market Analysis Response: {response_text}")  # Debug logging
+        
+        # Extract JSON if response has extra text
+        if not response_text.startswith('{'):
+            json_start = response_text.find('{')
+            json_end = response_text.rfind('}') + 1
+            if json_start >= 0 and json_end > json_start:
+                response_text = response_text[json_start:json_end]
+        
+        import json
+        analysis = json.loads(response_text)
+        
+        # Validate and set defaults
+        analysis.setdefault("market_sentiment", "neutral")
+        analysis.setdefault("trending_stocks", [])
+        analysis.setdefault("key_themes", [])
+        analysis.setdefault("daily_summary", "Market analysis unavailable")
+        analysis.setdefault("high_impact_events", [])
+        
+        # Add metadata
+        analysis["article_count"] = len(articles)
+        analysis["last_updated"] = datetime.now().isoformat()
+        
+        return analysis
+        
+    except json.JSONDecodeError as json_error:
+        print(f"JSON parsing error in market analysis: {json_error}")
+        print(f"Response was: {response_text}")
+        
+        # Fallback analysis based on article data
+        top_stocks = sorted(stock_mentions.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        return {
+            "market_sentiment": "neutral",
+            "trending_stocks": [
+                {"symbol": symbol, "reason": f"Mentioned in {count} articles", "sentiment": "neutral"}
+                for symbol, count in top_stocks
+            ],
+            "key_themes": ["Market News", "Corporate Updates", "Economic Reports"],
+            "daily_summary": f"Found {len(articles)} recent financial news articles covering various market developments.",
+            "high_impact_events": [],
+            "article_count": len(articles),
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise Exception(f"OpenAI market analysis error: {str(e)}")
+
+
 async def analyze_news_with_openai(articles: list, symbol: str, api_key: str = None):
     """Use OpenAI to analyze and summarize news articles for sentiment and key insights"""
     if api_key is None:
@@ -596,6 +989,32 @@ async def get_stock_history(symbol: str, period: str = "1y"):
         return JSONResponse(
             status_code=400,
             content={"error": f"Failed to fetch historical data for {symbol}: {str(e)}"}
+        )
+
+@app.get("/api/market/insights")
+async def get_market_insights(days_back: int = 1):
+    """Get AI-analyzed market insights and trending stocks from recent news"""
+    try:
+        # Fetch recent market news
+        articles = await fetch_market_news(days_back=days_back)
+        
+        # Analyze with OpenAI to extract trends and insights
+        analysis = await analyze_market_trends_with_openai(articles)
+        
+        # Include raw articles for frontend display
+        response = {
+            "analysis": analysis,
+            "raw_articles": articles[:10],  # First 10 articles for display
+            "last_updated": datetime.now().isoformat(),
+            "days_back": days_back
+        }
+        
+        return response
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Failed to fetch market insights: {str(e)}"}
         )
 
 if __name__ == "__main__":
