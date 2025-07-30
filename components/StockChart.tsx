@@ -79,12 +79,12 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900">{formatTooltipDate(label)}</p>
-          <p className="text-sm text-blue-600">
+        <div className="bg-gray-800 p-3 border border-gray-600 rounded-lg shadow-lg">
+          <p className="text-sm font-medium text-white">{formatTooltipDate(label)}</p>
+          <p className="text-sm text-blue-400">
             Price: {formatCurrency(data.close)}
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-300">
             Volume: {(data.volume / 1000000).toFixed(1)}M
           </p>
         </div>
@@ -95,9 +95,9 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
   if (!symbol) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Stock Chart</h2>
-        <p className="text-gray-500 text-center py-8">
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+        <h2 className="text-lg font-semibold mb-4 text-white">Stock Chart</h2>
+        <p className="text-gray-400 text-center py-8">
           Search for a stock to see price chart
         </p>
       </div>
@@ -105,13 +105,13 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Stock Chart</h2>
+        <h2 className="text-lg font-semibold text-white">Stock Chart</h2>
         <button
           onClick={() => fetchChartData()}
           disabled={loading}
-          className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-50"
+          className="p-1 hover:bg-gray-700/50 rounded-full disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
           title="Refresh chart"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -127,7 +127,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               selectedPeriod === period.value
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 hover:text-white'
             }`}
           >
             {period.label}
@@ -137,15 +137,15 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-gray-600">Loading chart...</span>
+          <RefreshCw className="w-5 h-5 animate-spin mr-2 text-gray-400" />
+          <span className="text-gray-400">Loading chart...</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-          <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
-          <span className="text-red-700 text-sm">{error}</span>
+        <div className="flex items-center p-3 bg-red-900/50 border border-red-500 rounded-lg mb-4 backdrop-blur-sm">
+          <AlertCircle className="w-4 h-4 text-red-400 mr-2" />
+          <span className="text-red-300 text-sm">{error}</span>
         </div>
       )}
 
@@ -155,17 +155,17 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={formatDate}
-                  stroke="#666"
+                  stroke="#9CA3AF"
                   fontSize={12}
                 />
                 <YAxis 
                   domain={['dataMin - 5', 'dataMax + 5']}
                   tickFormatter={(value) => `$${value.toFixed(0)}`}
-                  stroke="#666"
+                  stroke="#9CA3AF"
                   fontSize={12}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -183,7 +183,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
           {/* Trading Volume Chart */}
           <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Trading Volume</h3>
+            <h3 className="text-sm font-medium text-gray-300 mb-2">Trading Volume</h3>
             <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.data} margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
@@ -199,8 +199,8 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
                   />
                   <Bar 
                     dataKey="volume" 
-                    fill="#94a3b8"
-                    opacity={0.6}
+                    fill="#64748b"
+                    opacity={0.7}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -208,7 +208,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
           </div>
 
           {/* Chart Info */}
-          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div className="text-xs text-gray-400 pt-2 border-t border-gray-600">
             {data.data_points} data points • Period: {selectedPeriod.toUpperCase()} • High: {formatCurrency(data.period_high)} • Low: {formatCurrency(data.period_low)}
           </div>
         </div>

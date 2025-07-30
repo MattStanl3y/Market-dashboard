@@ -67,9 +67,9 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
 
   if (!symbol) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">AI Insights</h2>
-        <p className="text-gray-500 text-center py-8">
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+        <h2 className="text-lg font-semibold mb-4 text-white">AI Insights</h2>
+        <p className="text-gray-400 text-center py-8">
           Search for a stock to see AI-powered news analysis
         </p>
       </div>
@@ -77,13 +77,13 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">AI Insights</h2>
+        <h2 className="text-lg font-semibold text-white">AI Insights</h2>
         <button
           onClick={fetchInsights}
           disabled={loading}
-          className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-50"
+          className="p-1 hover:bg-gray-700/50 rounded-full disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
           title="Refresh insights"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -92,15 +92,15 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
 
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-gray-600">Analyzing news...</span>
+          <RefreshCw className="w-5 h-5 animate-spin mr-2 text-gray-400" />
+          <span className="text-gray-400">Analyzing news...</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-          <AlertCircle className="w-4 h-4 text-red-600 mr-2" />
-          <span className="text-red-700 text-sm">{error}</span>
+        <div className="flex items-center p-3 bg-red-900/50 border border-red-500 rounded-lg mb-4 backdrop-blur-sm">
+          <AlertCircle className="w-4 h-4 text-red-400 mr-2" />
+          <span className="text-red-300 text-sm">{error}</span>
         </div>
       )}
 
@@ -117,8 +117,8 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
 
           {/* Summary */}
           <div>
-            <h3 className="font-medium text-gray-900 mb-2">Summary</h3>
-            <p className="text-gray-700 text-sm leading-relaxed">
+            <h3 className="font-medium text-white mb-2">Summary</h3>
+            <p className="text-gray-300 text-sm leading-relaxed">
               {insights.analysis.summary}
             </p>
           </div>
@@ -126,11 +126,11 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
           {/* Key Points */}
           {insights.analysis.key_points.length > 0 && (
             <div>
-              <h3 className="font-medium text-gray-900 mb-2">Key Points</h3>
+              <h3 className="font-medium text-white mb-2">Key Points</h3>
               <ul className="space-y-1">
                 {insights.analysis.key_points.map((point, index) => (
-                  <li key={index} className="text-sm text-gray-700 flex items-start">
-                    <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                  <li key={index} className="text-sm text-gray-300 flex items-start">
+                    <span className="w-1 h-1 bg-gray-500 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                     {point}
                   </li>
                 ))}
@@ -141,20 +141,20 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
           {/* Recent Articles */}
           {insights.raw_articles.length > 0 && (
             <div>
-              <h3 className="font-medium text-gray-900 mb-2">Recent News</h3>
+              <h3 className="font-medium text-white mb-2">Recent News</h3>
               <div className="space-y-2">
                 {insights.raw_articles.slice(0, 3).map((article, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-3">
+                  <div key={index} className="border border-gray-600 rounded-lg p-3">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                        <h4 className="text-sm font-medium text-white line-clamp-2 mb-1">
                           {article.title}
                         </h4>
-                        <p className="text-xs text-gray-500 mb-1">
+                        <p className="text-xs text-gray-400 mb-1">
                           {article.source} • {formatDate(article.published_at)}
                         </p>
                         {article.description && (
-                          <p className="text-xs text-gray-600 line-clamp-2">
+                          <p className="text-xs text-gray-300 line-clamp-2">
                             {article.description}
                           </p>
                         )}
@@ -163,10 +163,10 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
                         href={article.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-2 p-1 hover:bg-gray-100 rounded"
+                        className="ml-2 p-1 hover:bg-gray-700/50 rounded transition-colors"
                         title="Read full article"
                       >
-                        <ExternalLink className="w-3 h-3" />
+                        <ExternalLink className="w-3 h-3 text-gray-400 hover:text-white" />
                       </a>
                     </div>
                   </div>
@@ -176,7 +176,7 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
           )}
 
           {/* Meta Info */}
-          <div className="text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div className="text-xs text-gray-400 pt-2 border-t border-gray-600">
             Based on {insights.analysis.article_count} articles • Updated {formatDate(insights.last_updated)}
           </div>
         </div>

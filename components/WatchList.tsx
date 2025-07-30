@@ -154,13 +154,13 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Watchlist</h2>
+        <h2 className="text-lg font-semibold text-white">Watchlist</h2>
         <button
           onClick={refreshAll}
           disabled={refreshing || watchedStocks.length === 0}
-          className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-50"
+          className="p-1 hover:bg-gray-700/50 rounded-full disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
           title="Refresh all prices"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -176,7 +176,7 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
             onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
             onKeyPress={handleKeyPress}
             placeholder="Add symbol (e.g., AAPL)"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-3 py-2 border border-gray-600 rounded-md text-sm bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isAdding}
           />
           <button
@@ -192,51 +192,51 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
       {/* Watchlist Items */}
       <div className="space-y-2">
         {watchedStocks.length === 0 ? (
-          <p className="text-gray-500 text-center py-4 text-sm">
+          <p className="text-gray-400 text-center py-4 text-sm">
             Add stocks to your watchlist to track prices
           </p>
         ) : (
           watchedStocks.map((stock) => (
             <div
               key={stock.symbol}
-              className={`p-3 border rounded-lg transition-all duration-200 cursor-pointer hover:bg-gray-50 hover:shadow-md transform hover:scale-[1.02] ${
-                currentSymbol === stock.symbol ? 'border-blue-500 bg-blue-50 shadow-md' : 'border-gray-200'
+              className={`p-3 border rounded-lg transition-all duration-200 cursor-pointer hover:bg-gray-700/50 hover:shadow-md transform hover:scale-[1.02] ${
+                currentSymbol === stock.symbol ? 'border-blue-500 bg-blue-600/20 shadow-md' : 'border-gray-600'
               }`}
               onClick={() => handleSymbolClick(stock.symbol)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{stock.symbol}</span>
+                    <span className="font-medium text-sm text-white">{stock.symbol}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         removeSymbol(stock.symbol)
                       }}
-                      className="p-1 hover:bg-gray-200 rounded-full"
+                      className="p-1 hover:bg-gray-600/50 rounded-full transition-colors"
                       title="Remove from watchlist"
                     >
-                      <X className="w-3 h-3 text-gray-500" />
+                      <X className="w-3 h-3 text-gray-400 hover:text-white" />
                     </button>
                   </div>
                   
                   {stock.loading ? (
-                    <div className="flex items-center text-xs text-gray-500">
+                    <div className="flex items-center text-xs text-gray-400">
                       <RefreshCw className="w-3 h-3 animate-spin mr-1" />
                       Loading...
                     </div>
                   ) : stock.error ? (
-                    <div className="flex items-center text-xs text-red-600">
+                    <div className="flex items-center text-xs text-red-400">
                       <AlertCircle className="w-3 h-3 mr-1" />
                       Error
                     </div>
                   ) : stock.data ? (
                     <div>
-                      <div className="text-sm font-medium">
+                      <div className="text-sm font-medium text-white">
                         {formatCurrency(stock.data.current_price)}
                       </div>
                       <div className={`flex items-center text-xs ${
-                        stock.data.change >= 0 ? 'text-green-600' : 'text-red-600'
+                        stock.data.change >= 0 ? 'text-green-400' : 'text-red-400'
                       }`}>
                         {stock.data.change >= 0 ? (
                           <TrendingUp className="w-3 h-3 mr-1" />
@@ -258,7 +258,7 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
       </div>
 
       {watchedStocks.length > 0 && (
-        <div className="text-xs text-gray-500 mt-4 pt-3 border-t border-gray-100">
+        <div className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-600">
           {watchedStocks.length} stock{watchedStocks.length !== 1 ? 's' : ''} watched • Click to view details
         </div>
       )}

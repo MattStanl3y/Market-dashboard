@@ -6,9 +6,11 @@ import { apiClient, type MarketInsights } from '@/lib/api'
 
 interface MarketInsightsProps {
   onSymbolSelect?: (symbol: string) => void
+  onSentimentChange?: (sentiment: string) => void
+  onFiltersChange?: (daysBack: number) => void
 }
 
-export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsightsProps) {
+export default function MarketInsightsComponent({ onSymbolSelect, onSentimentChange, onFiltersChange }: MarketInsightsProps) {
   const [insights, setInsights] = useState<MarketInsights | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -94,18 +96,18 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
     return (
       <div className="space-y-6">
         {/* Market Sentiment Skeleton */}
-        <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
-          <div className="h-16 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-32"></div>
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6 animate-pulse">
+          <div className="h-6 bg-gray-700 rounded w-48 mb-4"></div>
+          <div className="h-16 bg-gray-700 rounded mb-4"></div>
+          <div className="h-4 bg-gray-700 rounded w-32"></div>
         </div>
         
         {/* Trending Stocks Skeleton */}
-        <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-40 mb-4"></div>
+        <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6 animate-pulse">
+          <div className="h-6 bg-gray-700 rounded w-40 mb-4"></div>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-gray-200 rounded"></div>
+              <div key={i} className="h-12 bg-gray-700 rounded"></div>
             ))}
           </div>
         </div>
@@ -115,84 +117,40 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">AI Market Insights</h1>
-          <div className="flex items-center gap-2">
-            <select
-              value={daysBack}
-              onChange={(e) => setDaysBack(Number(e.target.value))}
-              className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={1}>Today</option>
-              <option value={3}>3 Days</option>
-              <option value={7}>This Week</option>
-            </select>
-            <button
-              onClick={() => fetchInsights()}
-              disabled={loading}
-              className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50"
-              title="Refresh insights"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-        
-        <p className="text-gray-600">
-          AI-powered analysis of market-moving news and trending stocks
-        </p>
-      </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-900/50 border border-red-500 rounded-lg p-4 backdrop-blur-sm">
           <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-            <span className="text-red-700">{error}</span>
+            <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+            <span className="text-red-300">{error}</span>
           </div>
         </div>
       )}
 
       {insights && (
         <>
-          {/* Market Sentiment Overview */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Market Sentiment</h2>
-              <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getSentimentColor(insights.analysis.market_sentiment)}`}>
-                {getSentimentIcon(insights.analysis.market_sentiment)}
-                <span className="ml-2 capitalize">{insights.analysis.market_sentiment}</span>
+          {/* Key Themes */}
+          {insights.analysis.key_themes.length > 0 && (
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-white mb-3">Key Market Themes</h3>
+              <div className="flex flex-wrap gap-2">
+                {insights.analysis.key_themes.map((theme, index) => (
+                  <span
+                    key={index}
+                    className="px-3 py-1 bg-blue-600/20 text-blue-300 text-sm rounded-full border border-blue-500/30"
+                  >
+                    {theme}
+                  </span>
+                ))}
               </div>
             </div>
-            
-            <p className="text-gray-700 mb-4 leading-relaxed">
-              {insights.analysis.daily_summary}
-            </p>
-            
-            {/* Key Themes */}
-            {insights.analysis.key_themes.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Key Market Themes</h3>
-                <div className="flex flex-wrap gap-2">
-                  {insights.analysis.key_themes.map((theme, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200"
-                    >
-                      {theme}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Trending Stocks */}
           {insights.analysis.trending_stocks.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <Zap className="w-5 h-5 mr-2 text-yellow-500" />
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center text-white">
+                <Zap className="w-5 h-5 mr-2 text-yellow-400" />
                 Trending Stocks
               </h2>
               
@@ -200,7 +158,7 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
                 {insights.analysis.trending_stocks.map((stock, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3 border border-gray-600 rounded-lg hover:bg-gray-700/50 cursor-pointer transition-colors"
                     onClick={() => handleStockClick(stock.symbol)}
                   >
                     <div className="flex items-center flex-1">
@@ -208,12 +166,12 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
                         {getSentimentIcon(stock.sentiment)}
                         <div className="ml-3">
                           <div className="flex items-center">
-                            <span className="font-medium text-gray-900">{stock.symbol}</span>
+                            <span className="font-medium text-white">{stock.symbol}</span>
                             <span className={`ml-2 px-2 py-1 text-xs rounded-full ${getSentimentColor(stock.sentiment)}`}>
                               {stock.sentiment}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">{stock.reason}</p>
+                          <p className="text-sm text-gray-300 mt-1">{stock.reason}</p>
                         </div>
                       </div>
                     </div>
@@ -226,9 +184,9 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
 
           {/* High Impact Events */}
           {insights.analysis.high_impact_events.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <Calendar className="w-5 h-5 mr-2 text-blue-500" />
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center text-white">
+                <Calendar className="w-5 h-5 mr-2 text-blue-400" />
                 Upcoming Events to Watch
               </h2>
               
@@ -236,11 +194,11 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
                 {insights.analysis.high_impact_events.map((event, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                    className="flex items-center justify-between p-3 border border-gray-600 rounded-lg"
                   >
                     <div>
-                      <h3 className="font-medium text-gray-900">{event.event}</h3>
-                      <p className="text-sm text-gray-600">{event.timeframe}</p>
+                      <h3 className="font-medium text-white">{event.event}</h3>
+                      <p className="text-sm text-gray-400">{event.timeframe}</p>
                     </div>
                     <span className={`px-3 py-1 text-xs rounded-full font-medium border ${getImpactColor(event.impact)}`}>
                       {event.impact.toUpperCase()} IMPACT
@@ -253,44 +211,76 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
 
           {/* Recent Market News */}
           {insights.raw_articles.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">Latest Market News</h2>
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+              <h2 className="text-lg font-semibold mb-4 text-white">Latest Market News</h2>
               
-              <div className="space-y-4">
-                {insights.raw_articles.slice(0, 5).map((article, index) => (
-                  <div key={index} className="border-b border-gray-100 pb-4 last:border-b-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
-                          {article.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {article.description}
+              <div className="space-y-3">
+                {insights.raw_articles.slice(0, 6).map((article, index) => {
+                  // Create concise summary from title and description
+                  const createConciseSummary = (title: string, description: string) => {
+                    // Extract key info from title, clean up common patterns
+                    let summary = title
+                      .replace(/\s*-\s*.*$/, '') // Remove source suffixes like "- Reuters"
+                      .replace(/^\w+:\s*/, '') // Remove prefixes like "UPDATE:"
+                      .trim()
+                    
+                    // If description adds meaningful context, incorporate key parts
+                    if (description && description.length > 20) {
+                      const descWords = description.toLowerCase()
+                      if (descWords.includes('earnings') || descWords.includes('revenue') || 
+                          descWords.includes('stock') || descWords.includes('shares') ||
+                          descWords.includes('deal') || descWords.includes('merger')) {
+                        // Extract key numbers or percentages if they exist
+                        const percentMatch = description.match(/(\d+(?:\.\d+)?%)/g)?.[0]
+                        const dollarMatch = description.match(/\$(\d+(?:\.\d+)?(?:\s*billion|\s*million)?)/gi)?.[0]
+                        
+                        if (percentMatch) {
+                          summary += `, ${percentMatch} ${descWords.includes('gain') || descWords.includes('rise') || descWords.includes('up') ? 'gain' : 
+                                      descWords.includes('fall') || descWords.includes('drop') || descWords.includes('down') ? 'decline' : 'change'}`
+                        } else if (dollarMatch) {
+                          summary += `, involving ${dollarMatch}`
+                        }
+                      }
+                    }
+                    
+                    return summary
+                  }
+                  
+                  const conciseSummary = createConciseSummary(article.title, article.description || '')
+                  
+                  return (
+                    <div key={index} className="flex items-start gap-3 group">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-300 leading-relaxed line-clamp-2">
+                          {conciseSummary}
                         </p>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <span>{article.source}</span>
-                          <span className="mx-2">•</span>
-                          <span>{formatDate(article.published_at)}</span>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <span>{article.source}</span>
+                            <span className="mx-1">•</span>
+                            <span>{formatDate(article.published_at)}</span>
+                          </div>
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-700/50 rounded transition-all duration-200"
+                            title="Read full article"
+                          >
+                            <ExternalLink className="w-3 h-3 text-gray-400 hover:text-white" />
+                          </a>
                         </div>
                       </div>
-                      <a
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-3 p-2 hover:bg-gray-100 rounded-full"
-                        title="Read full article"
-                      >
-                        <ExternalLink className="w-4 h-4 text-gray-400" />
-                      </a>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
 
           {/* Footer Info */}
-          <div className="text-xs text-gray-500 text-center">
+          <div className="text-xs text-gray-400 text-center">
             Based on {insights.analysis.article_count} articles • Updated {formatDate(insights.last_updated)}
           </div>
         </>
