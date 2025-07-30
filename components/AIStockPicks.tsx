@@ -1,0 +1,235 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { TrendingUp, TrendingDown, Minus, Eye, Sparkles } from 'lucide-react'
+import { apiClient, type StockData } from '@/lib/api'
+import { formatCurrency, formatPercent } from '@/lib/utils'
+
+interface AIStockPicksProps {
+  onSymbolSelect?: (symbol: string) => void
+}
+
+interface StockPick {
+  symbol: string
+  sentiment: 'bullish' | 'bearish' | 'neutral'
+  reason: string
+  data?: StockData
+  loading?: boolean
+  error?: boolean
+}
+
+const FEATURED_STOCKS: Omit<StockPick, 'data' | 'loading' | 'error'>[] = [
+  { symbol: 'AAPL', sentiment: 'bullish', reason: 'Strong iPhone sales and AI integration' },
+  { symbol: 'TSLA', sentiment: 'bullish', reason: 'Leading EV market position' },
+  { symbol: 'NVDA', sentiment: 'bullish', reason: 'AI chip demand continues growing' },
+  { symbol: 'MSFT', sentiment: 'bullish', reason: 'Cloud and AI services expansion' },
+  { symbol: 'GOOGL', sentiment: 'neutral', reason: 'Search dominance with AI competition' },
+  { symbol: 'AMZN', sentiment: 'bullish', reason: 'AWS growth and retail efficiency' },
+  { symbol: 'META', sentiment: 'neutral', reason: 'Metaverse investments vs core ads' },
+  { symbol: 'NFLX', sentiment: 'bearish', reason: 'Streaming competition intensifying' }
+]
+
+export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
+  const [stocks, setStocks] = useState<StockPick[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadStockData = async () => {
+      setLoading(true)
+      const initialStocks = FEATURED_STOCKS.map(stock => ({
+        ...stock,
+        loading: true,
+        error: false
+      }))
+      setStocks(initialStocks)
+
+      // Fetch data for all stocks in parallel
+      const promises = FEATURED_STOCKS.map(async (stock) => {
+        try {
+          const data = await apiClient.getStock(stock.symbol)
+          return { ...stock, data, loading: false, error: false }
+        } catch (error) {
+          console.error(`Failed to fetch data for ${stock.symbol}:`, error)
+          return { ...stock, loading: false, error: true }
+        }
+      })
+
+      try {
+        const results = await Promise.all(promises)
+        setStocks(results)
+      } catch (error) {
+        console.error('Error loading stock picks:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadStockData()
+  }, [])
+
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish':
+        return <TrendingUp className="w-4 h-4 text-green-400" />
+      case 'bearish':
+        return <TrendingDown className="w-4 h-4 text-red-400" />
+      default:
+        return <Minus className="w-4 h-4 text-yellow-400" />
+    }
+  }
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'bullish':
+        return 'text-green-400 bg-green-500/20 border-green-500/30'
+      case 'bearish':
+        return 'text-red-400 bg-red-500/20 border-red-500/30'
+      default:
+        return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30'
+    }
+  }
+
+  const handleStockClick = (symbol: string) => {
+    if (onSymbolSelect) {
+      onSymbolSelect(symbol)
+    }
+  }
+
+
+  return (
+    <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6 mb-6">
+      <div className="flex items-center mb-4">
+        <Sparkles className="w-6 h-6 mr-3 text-blue-400" />
+        <h2 className="text-xl font-semibold text-slate-100">Top Stock Picks</h2>
+        <span className="ml-2 px-2 py-1 text-xs bg-blue-600/20 text-blue-400 rounded-full border border-blue-500/30">
+          FEATURED
+        </span>
+      </div>
+
+      {/* Mobile: Horizontal scroll, Desktop: Grid */}
+      <div className="lg:grid lg:grid-cols-2 xl:grid-cols-4 lg:gap-4 lg:overflow-visible">
+        <div className="flex lg:hidden gap-4 overflow-x-auto pb-2 -mx-2 px-2">
+          {stocks.map((stock) => (
+            <div
+              key={stock.symbol}
+              className="min-w-[280px] bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] flex-shrink-0"
+              onClick={() => handleStockClick(stock.symbol)}
+            >
+              {/* Mobile card content */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <span className="font-bold text-slate-100 text-lg">{stock.symbol}</span>
+                  <div className={`ml-2 flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSentimentColor(stock.sentiment)}`}>
+                    {getSentimentIcon(stock.sentiment)}
+                    <span className="ml-1 capitalize">{stock.sentiment}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleStockClick(stock.symbol)
+                    }}
+                    className="p-2 rounded-full bg-slate-600/50 text-slate-400 hover:bg-blue-600/50 hover:text-blue-400 transition-colors"
+                    title="View details"
+                  >
+                    <Eye className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {stock.loading ? (
+                <div className="space-y-2">
+                  <div className="h-6 bg-slate-600/50 rounded animate-pulse"></div>
+                  <div className="h-4 bg-slate-600/50 rounded w-3/4 animate-pulse"></div>
+                </div>
+              ) : stock.error ? (
+                <div className="text-red-400 text-sm">Unable to load data</div>
+              ) : stock.data ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-100 font-semibold">
+                      {formatCurrency(stock.data.current_price)}
+                    </span>
+                    <span className={`text-sm font-medium ${
+                      stock.data.change >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {formatPercent(stock.data.change_percent)}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-sm line-clamp-2">
+                    {stock.reason}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop grid */}
+        <div className="hidden lg:contents">
+          {stocks.map((stock) => (
+            <div
+              key={stock.symbol}
+              className="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+              onClick={() => handleStockClick(stock.symbol)}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center">
+                  <span className="font-bold text-slate-100 text-lg">{stock.symbol}</span>
+                  <div className={`ml-2 flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getSentimentColor(stock.sentiment)}`}>
+                    {getSentimentIcon(stock.sentiment)}
+                    <span className="ml-1 capitalize">{stock.sentiment}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleStockClick(stock.symbol)
+                    }}
+                    className="p-2 rounded-full bg-slate-600/50 text-slate-400 hover:bg-blue-600/50 hover:text-blue-400 transition-colors"
+                    title="View details"
+                  >
+                    <Eye className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {stock.loading ? (
+                <div className="space-y-2">
+                  <div className="h-6 bg-slate-600/50 rounded animate-pulse"></div>
+                  <div className="h-4 bg-slate-600/50 rounded w-3/4 animate-pulse"></div>
+                </div>
+              ) : stock.error ? (
+                <div className="text-red-400 text-sm">Unable to load data</div>
+              ) : stock.data ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-100 font-semibold">
+                      {formatCurrency(stock.data.current_price)}
+                    </span>
+                    <span className={`text-sm font-medium ${
+                      stock.data.change >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {formatPercent(stock.data.change_percent)}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-sm line-clamp-2">
+                    {stock.reason}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-600 text-center">
+        AI-curated picks based on market trends and analysis • Click to view details
+      </div>
+    </div>
+  )
+}

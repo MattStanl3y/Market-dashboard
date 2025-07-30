@@ -95,9 +95,9 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
   if (!symbol) {
     return (
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
-        <h2 className="text-lg font-semibold mb-4 text-white">Stock Chart</h2>
-        <p className="text-gray-400 text-center py-8">
+      <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6">
+        <h2 className="text-lg font-semibold mb-4 text-slate-100">Stock Chart</h2>
+        <p className="text-slate-400 text-center py-8">
           Search for a stock to see price chart
         </p>
       </div>
@@ -105,13 +105,13 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
   }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+    <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">Stock Chart</h2>
+        <h2 className="text-lg font-semibold text-slate-100">Stock Chart</h2>
         <button
           onClick={() => fetchChartData()}
           disabled={loading}
-          className="p-1 hover:bg-gray-700/50 rounded-full disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
+          className="p-1 hover:bg-slate-700/50 rounded-full disabled:opacity-50 text-slate-400 hover:text-slate-200 transition-colors"
           title="Refresh chart"
         >
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -127,7 +127,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               selectedPeriod === period.value
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 hover:text-white'
+                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:text-slate-100'
             }`}
           >
             {period.label}
@@ -137,8 +137,8 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
       {loading && (
         <div className="flex items-center justify-center py-8">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2 text-gray-400" />
-          <span className="text-gray-400">Loading chart...</span>
+          <RefreshCw className="w-5 h-5 animate-spin mr-2 text-slate-400" />
+          <span className="text-slate-400">Loading chart...</span>
         </div>
       )}
 
@@ -155,17 +155,17 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={formatDate}
-                  stroke="#9CA3AF"
+                  stroke="#94a3b8"
                   fontSize={12}
                 />
                 <YAxis 
                   domain={['dataMin - 5', 'dataMax + 5']}
                   tickFormatter={(value) => `$${value.toFixed(0)}`}
-                  stroke="#9CA3AF"
+                  stroke="#94a3b8"
                   fontSize={12}
                 />
                 <Tooltip content={<CustomTooltip />} />
@@ -183,7 +183,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
 
           {/* Trading Volume Chart */}
           <div className="mt-4">
-            <h3 className="text-sm font-medium text-gray-300 mb-2">Trading Volume</h3>
+            <h3 className="text-sm font-medium text-slate-300 mb-2">Trading Volume</h3>
             <div className="h-20">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.data} margin={{ top: 0, right: 30, left: 20, bottom: 0 }}>
@@ -208,7 +208,7 @@ export default function StockChart({ symbol, onPeriodChange }: StockChartProps) 
           </div>
 
           {/* Chart Info */}
-          <div className="text-xs text-gray-400 pt-2 border-t border-gray-600">
+          <div className="text-xs text-slate-400 pt-2 border-t border-slate-600">
             {data.data_points} data points • Period: {selectedPeriod.toUpperCase()} • High: {formatCurrency(data.period_high)} • Low: {formatCurrency(data.period_low)}
           </div>
         </div>

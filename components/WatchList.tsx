@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Plus, X, RefreshCw, AlertCircle } from 'lucide-react'
+import { TrendingUp, TrendingDown, X, RefreshCw, AlertCircle } from 'lucide-react'
 import { apiClient, type StockData } from '@/lib/api'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
 interface WatchListProps {
   onSymbolSelect?: (symbol: string) => void
   currentSymbol?: string
+  onAddSymbol?: (addFn: (symbol: string) => Promise<void>) => void
 }
 
 interface WatchedStock {
@@ -17,10 +18,8 @@ interface WatchedStock {
   error?: string
 }
 
-export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListProps) {
+export default function WatchList({ onSymbolSelect, currentSymbol, onAddSymbol }: WatchListProps) {
   const [watchedStocks, setWatchedStocks] = useState<WatchedStock[]>([])
-  const [newSymbol, setNewSymbol] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true)
 
@@ -57,6 +56,13 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
     return () => clearInterval(interval)
   }, [autoRefreshEnabled, watchedStocks.length, refreshing])
 
+  // Pass addSymbol function to parent component
+  useEffect(() => {
+    if (onAddSymbol) {
+      onAddSymbol(addSymbol)
+    }
+  }, [onAddSymbol])
+
   // Save watchlist to localStorage whenever it changes
   const saveWatchlist = (stocks: WatchedStock[]) => {
     const symbols = stocks.map(stock => stock.symbol)
@@ -86,21 +92,16 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
     }
   }
 
-  const addSymbol = async () => {
-    if (!newSymbol.trim()) return
-    
-    const symbol = newSymbol.trim().toUpperCase()
+  const addSymbol = async (symbol: string) => {
+    const upperSymbol = symbol.trim().toUpperCase()
     
     // Check if symbol already exists
-    if (watchedStocks.some(stock => stock.symbol === symbol)) {
-      setNewSymbol('')
+    if (watchedStocks.some(stock => stock.symbol === upperSymbol)) {
       return
     }
-
-    setIsAdding(true)
     
     const newStock: WatchedStock = {
-      symbol,
+      symbol: upperSymbol,
       loading: true
     }
 
@@ -109,13 +110,10 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
     saveWatchlist(updatedStocks)
     
     try {
-      await fetchStockData(symbol)
+      await fetchStockData(upperSymbol)
     } catch (error) {
       console.error('Error adding symbol to watchlist:', error)
     }
-    
-    setNewSymbol('')
-    setIsAdding(false)
   }
 
   const removeSymbol = (symbol: string) => {
@@ -147,81 +145,54 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      addSymbol()
-    }
-  }
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 p-6">
+    <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-white">Watchlist</h2>
+        <h2 className="text-lg font-semibold text-slate-100">Watchlist</h2>
         <button
           onClick={refreshAll}
           disabled={refreshing || watchedStocks.length === 0}
-          className="p-1 hover:bg-gray-700/50 rounded-full disabled:opacity-50 text-gray-300 hover:text-white transition-colors"
+          className="p-1 hover:bg-slate-700/50 rounded-full disabled:opacity-50 text-slate-400 hover:text-slate-200 transition-colors"
           title="Refresh all prices"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Add Symbol Input */}
-      <div className="mb-4">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newSymbol}
-            onChange={(e) => setNewSymbol(e.target.value.toUpperCase())}
-            onKeyPress={handleKeyPress}
-            placeholder="Add symbol (e.g., AAPL)"
-            className="flex-1 px-3 py-2 border border-gray-600 rounded-md text-sm bg-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isAdding}
-          />
-          <button
-            onClick={addSymbol}
-            disabled={isAdding || !newSymbol.trim()}
-            className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
       {/* Watchlist Items */}
       <div className="space-y-2">
         {watchedStocks.length === 0 ? (
-          <p className="text-gray-400 text-center py-4 text-sm">
-            Add stocks to your watchlist to track prices
+          <p className="text-slate-400 text-center py-4 text-sm">
+            Use the ❤️ button on stock cards to add to watchlist
           </p>
         ) : (
           watchedStocks.map((stock) => (
             <div
               key={stock.symbol}
-              className={`p-3 border rounded-lg transition-all duration-200 cursor-pointer hover:bg-gray-700/50 hover:shadow-md transform hover:scale-[1.02] ${
-                currentSymbol === stock.symbol ? 'border-blue-500 bg-blue-600/20 shadow-md' : 'border-gray-600'
+              className={`p-3 border rounded-lg transition-all duration-200 cursor-pointer hover:bg-slate-700/50 hover:shadow-md transform hover:scale-[1.02] ${
+                currentSymbol === stock.symbol ? 'border-blue-500 bg-blue-600/20 shadow-md' : 'border-slate-600'
               }`}
               onClick={() => handleSymbolClick(stock.symbol)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm text-white">{stock.symbol}</span>
+                    <span className="font-medium text-sm text-slate-100">{stock.symbol}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
                         removeSymbol(stock.symbol)
                       }}
-                      className="p-1 hover:bg-gray-600/50 rounded-full transition-colors"
+                      className="p-1 hover:bg-slate-600/50 rounded-full transition-colors"
                       title="Remove from watchlist"
                     >
-                      <X className="w-3 h-3 text-gray-400 hover:text-white" />
+                      <X className="w-3 h-3 text-slate-400 hover:text-slate-200" />
                     </button>
                   </div>
                   
                   {stock.loading ? (
-                    <div className="flex items-center text-xs text-gray-400">
+                    <div className="flex items-center text-xs text-slate-400">
                       <RefreshCw className="w-3 h-3 animate-spin mr-1" />
                       Loading...
                     </div>
@@ -232,7 +203,7 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
                     </div>
                   ) : stock.data ? (
                     <div>
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-slate-100">
                         {formatCurrency(stock.data.current_price)}
                       </div>
                       <div className={`flex items-center text-xs ${
@@ -258,7 +229,7 @@ export default function WatchList({ onSymbolSelect, currentSymbol }: WatchListPr
       </div>
 
       {watchedStocks.length > 0 && (
-        <div className="text-xs text-gray-400 mt-4 pt-3 border-t border-gray-600">
+        <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-600">
           {watchedStocks.length} stock{watchedStocks.length !== 1 ? 's' : ''} watched • Click to view details
         </div>
       )}
