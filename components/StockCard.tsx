@@ -14,7 +14,7 @@ interface StockCardProps {
 // Loading skeleton component
 function StockCardSkeleton() {
   return (
-    <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-gray-700 animate-pulse">
+    <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-slate-700/50 animate-pulse">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="h-6 bg-gray-700 rounded w-20 mb-2"></div>
@@ -75,14 +75,14 @@ export default function StockCard({ data, period = '1y', chartData, loading = fa
   }
 
   return (
-    <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg p-6 border border-slate-600">
+    <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-slate-700/50">
       <div className="flex items-start justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-100">{data.symbol}</h2>
           <p className="text-slate-300 text-sm">{data.company_name}</p>
         </div>
-        <div className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-          isPositive ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'
+        <div className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm ${
+          isPositive ? 'bg-gradient-to-r from-green-600/20 to-emerald-600/20 text-green-400 border border-green-500/40' : 'bg-gradient-to-r from-red-600/20 to-red-800/20 text-red-400 border border-red-500/40'
         }`}>
           {isPositive ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
           {formatPercent(data.change_percent)}
@@ -108,7 +108,7 @@ export default function StockCard({ data, period = '1y', chartData, loading = fa
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-600">
+      <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-600/50">
         <div>
           <p className="text-sm text-slate-400">Market Cap</p>
           <p className="font-semibold text-slate-100">
@@ -161,7 +161,7 @@ export default function StockCard({ data, period = '1y', chartData, loading = fa
       
       {/* Company Info Section */}
       {(data.sector || data.industry) && (
-        <div className="pt-4 border-t border-slate-600 mt-4">
+        <div className="pt-6 border-t border-slate-600/50 mt-4">
           <div className="grid grid-cols-1 gap-2">
             {data.sector && (
               <div>

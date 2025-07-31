@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, TrendingUp, AlertCircle } from 'lucide-react'
+import { ArrowLeft, BarChart3, AlertCircle, Activity } from 'lucide-react'
 import StockCard from '@/components/StockCard'
 import StockChart from '@/components/StockChart'
 import AIInsights from '@/components/AIInsights'
@@ -42,12 +42,12 @@ export default function StockPage() {
 
   if (!symbol) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-slate-100 mb-4">Invalid Stock Symbol</h1>
           <button
             onClick={() => router.push('/')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-slate-600 text-white rounded-xl hover:from-blue-700 hover:to-slate-700 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Back to Home
           </button>
@@ -57,22 +57,27 @@ export default function StockPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950">
+    <main className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950">
       <div className="mx-auto max-w-7xl p-4 lg:p-6">
         {/* Header with Back Button */}
-        <header className="mb-6">
-          <div className="flex items-center mb-4">
+        <header className="mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <button
               onClick={() => router.push('/')}
-              className="flex items-center px-4 py-2 bg-slate-800/60 hover:bg-slate-700/60 text-slate-300 hover:text-slate-100 rounded-lg border border-slate-600 transition-colors mr-4"
+              className="flex items-center px-5 py-3 bg-gradient-to-r from-slate-800/80 to-slate-700/80 hover:from-slate-700/80 hover:to-slate-600/80 text-slate-300 hover:text-white rounded-xl border border-slate-600/50 hover:border-blue-500/50 transition-all duration-200 backdrop-blur-sm mb-4 sm:mb-0 w-fit"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </button>
             <div className="flex items-center">
-              <TrendingUp className="w-6 h-6 mr-3 text-blue-400" />
-              <h1 className="text-2xl font-bold text-slate-100">
-                Stock Analysis: {symbol}
+              <div className="relative mr-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-600 rounded-lg blur-sm opacity-50"></div>
+                <div className="relative bg-gradient-to-r from-blue-600 to-slate-700 p-2 rounded-lg">
+                  <Activity className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-slate-300 to-blue-400 bg-clip-text text-transparent">
+                {symbol} Analysis
               </h1>
             </div>
           </div>
@@ -80,16 +85,16 @@ export default function StockPage() {
 
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-red-900/50 border border-red-500 text-red-300 rounded-lg backdrop-blur-sm animate-in slide-in-from-top duration-300">
+          <div className="mb-8 p-5 bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl backdrop-blur-md animate-in slide-in-from-top duration-300">
             <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 mr-2 text-red-400" />
-              <span>Error: {error}</span>
+              <AlertCircle className="w-5 h-5 mr-3 text-red-400" />
+              <span className="font-medium">Error: {error}</span>
             </div>
           </div>
         )}
 
         {/* Main Content - Vertical Stack Layout */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Stock Card - Full Width */}
           <div className="w-full">
             <StockCard 

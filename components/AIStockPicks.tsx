@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Minus, Eye, Star } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Eye, Star, ArrowUpRight } from 'lucide-react'
 import { apiClient, type StockData } from '@/lib/api'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
@@ -97,12 +97,17 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
 
 
   return (
-    <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6 mb-6">
-      <div className="flex items-center mb-4">
-        <Star className="w-6 h-6 mr-3 text-blue-400" />
-        <h2 className="text-xl font-semibold text-slate-100">Top Stock Picks</h2>
-        <span className="ml-2 px-2 py-1 text-xs bg-blue-600/20 text-blue-400 rounded-full border border-blue-500/30">
-          FEATURED
+    <div className="bg-gradient-to-r from-slate-800/80 via-gray-800/60 to-slate-900/80 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-700/50 p-6 mb-8">
+      <div className="flex items-center mb-6">
+        <div className="relative mr-3">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-600 rounded-lg blur-sm opacity-50"></div>
+          <div className="relative bg-gradient-to-r from-blue-600 to-slate-700 p-2 rounded-lg">
+            <Star className="w-5 h-5 text-white" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent">Featured Picks</h2>
+        <span className="ml-3 px-3 py-1 text-xs bg-gradient-to-r from-blue-600/30 to-slate-600/30 text-blue-300 rounded-full border border-blue-500/30 font-medium">
+          TRENDING
         </span>
       </div>
 
@@ -112,7 +117,7 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
           {stocks.map((stock) => (
             <div
               key={stock.symbol}
-              className="min-w-[280px] bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] flex-shrink-0"
+              className="min-w-[300px] bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-600/50 rounded-xl p-5 hover:from-slate-700/90 hover:to-slate-800/90 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.03] hover:border-blue-500/50 flex-shrink-0 backdrop-blur-sm"
               onClick={() => handleStockClick(stock.symbol)}
             >
               {/* Mobile card content */}
@@ -131,10 +136,10 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
                       e.stopPropagation()
                       handleStockClick(stock.symbol)
                     }}
-                    className="p-2 rounded-full bg-slate-600/50 text-slate-400 hover:bg-blue-600/50 hover:text-blue-400 transition-colors"
+                    className="p-2 rounded-full bg-gradient-to-r from-blue-600/20 to-slate-600/20 text-slate-400 hover:from-blue-600/40 hover:to-slate-600/40 hover:text-blue-300 transition-all duration-200 border border-blue-500/20"
                     title="View details"
                   >
-                    <Eye className="w-3 h-3" />
+                    <ArrowUpRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -172,7 +177,7 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
           {stocks.map((stock) => (
             <div
               key={stock.symbol}
-              className="bg-slate-700/50 border border-slate-600 rounded-lg p-4 hover:bg-slate-700/70 cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+              className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-600/50 rounded-xl p-5 hover:from-slate-700/90 hover:to-slate-800/90 cursor-pointer transition-all duration-300 hover:shadow-xl hover:scale-[1.03] hover:border-blue-500/50 backdrop-blur-sm"
               onClick={() => handleStockClick(stock.symbol)}
             >
               <div className="flex items-center justify-between mb-3">
@@ -190,10 +195,10 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
                       e.stopPropagation()
                       handleStockClick(stock.symbol)
                     }}
-                    className="p-2 rounded-full bg-slate-600/50 text-slate-400 hover:bg-blue-600/50 hover:text-blue-400 transition-colors"
+                    className="p-2 rounded-full bg-gradient-to-r from-blue-600/20 to-slate-600/20 text-slate-400 hover:from-blue-600/40 hover:to-slate-600/40 hover:text-blue-300 transition-all duration-200 border border-blue-500/20"
                     title="View details"
                   >
-                    <Eye className="w-3 h-3" />
+                    <ArrowUpRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -227,8 +232,8 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
         </div>
       </div>
 
-      <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-600 text-center">
-Featured stocks based on market trends and analysis • Click to view details
+      <div className="text-xs text-slate-400 mt-6 pt-4 border-t border-slate-600/50 text-center">
+        <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent font-medium">Curated picks</span> based on market trends • Click to explore
       </div>
     </div>
   )
