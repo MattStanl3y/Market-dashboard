@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
@@ -7,11 +7,15 @@ from newsapi import NewsApiClient
 from datetime import datetime, timedelta
 import openai
 from typing import Optional
+import time
 
 load_dotenv()
 
 # Simple in-memory cache for chart data
 chart_cache = {}
+
+# Simple rate limiting cache
+rate_limit_cache = {}
 
 app = FastAPI(title="Market Dashboard API", version="1.0.0")
 
@@ -19,14 +23,36 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3000", 
         "https://market-dashboard-fawn.vercel.app",
         "https://market.mattstanley.dev"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+def check_rate_limit(client_ip: str, max_requests: int = 60, window_minutes: int = 1) -> bool:
+    """Simple rate limiting - max_requests per window_minutes"""
+    current_time = time.time()
+    window_size = window_minutes * 60
+    
+    if client_ip not in rate_limit_cache:
+        rate_limit_cache[client_ip] = []
+    
+    # Remove old requests outside the window
+    rate_limit_cache[client_ip] = [
+        req_time for req_time in rate_limit_cache[client_ip] 
+        if current_time - req_time < window_size
+    ]
+    
+    # Check if limit exceeded
+    if len(rate_limit_cache[client_ip]) >= max_requests:
+        return False
+    
+    # Add current request
+    rate_limit_cache[client_ip].append(current_time)
+    return True
 
 @app.get("/")
 async def root():
@@ -55,7 +81,7 @@ async def fetch_alpha_vantage_overview(symbol: str, api_key: str = None):
             elif "Note" in data:
                 raise Exception("API call frequency limit reached. Please try again later.")
             elif "Information" in data:
-                raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                raise Exception(f"Alpha Vantage API limit reached for {symbol}")
             elif not data or data == {}:
                 raise Exception("No overview data available for this symbol")
             
@@ -103,7 +129,7 @@ async def fetch_alpha_vantage_overview(symbol: str, api_key: str = None):
             }
             
     except Exception as e:
-        raise Exception(f"Alpha Vantage overview API error: {str(e)}")
+        raise Exception(f"Alpha Vantage overview API error for {symbol}: Failed to fetch company data")
 
 
 async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
@@ -129,7 +155,7 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
                 elif "Note" in data:
                     raise Exception("API call frequency limit reached. Please try again later.")
                 elif "Information" in data:
-                    raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                    raise Exception(f"Alpha Vantage API limit reached for {symbol}")
                 else:
                     raise Exception("Invalid response from Alpha Vantage")
                 
@@ -139,9 +165,9 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             overview_data = None
             try:
                 overview_data = await fetch_alpha_vantage_overview(symbol, api_key)
-            except Exception as overview_error:
-                print(f"Overview data failed for {symbol}: {overview_error}")
-                # Continue without overview data
+            except Exception:
+                # Continue without overview data - don't log errors that may contain sensitive info
+                overview_data = None
             
             # Combine quote and overview data
             result = {
@@ -196,7 +222,7 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             return result
             
     except Exception as e:
-        raise Exception(f"Alpha Vantage API error: {str(e)}")
+        raise Exception(f"Alpha Vantage API error for {symbol}: Failed to fetch stock data")
 
 
 async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: str = None):
@@ -224,8 +250,7 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
                 response = await client.get(url, timeout=30)
                 data = response.json()
                 
-                print(f"Alpha Vantage 1D response keys: {list(data.keys())}")  # Debug
-                print(f"Alpha Vantage 1D response: {data}")  # Debug
+                # Debug logs removed for security
                 
                 if "Time Series (30min)" not in data:
                     if "Error Message" in data:
@@ -233,9 +258,9 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
                     elif "Note" in data:
                         raise Exception("API call frequency limit reached. Please try again later.")
                     elif "Information" in data:
-                        raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                        raise Exception(f"Alpha Vantage API limit reached for {symbol}")
                     else:
-                        raise Exception(f"Invalid 1D response from Alpha Vantage. Got keys: {list(data.keys())}")
+                        raise Exception(f"Invalid 1D response from Alpha Vantage for {symbol}")
                 
                 time_series = data["Time Series (30min)"]
                 
@@ -300,8 +325,7 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
                 response = await client.get(url, timeout=30)
                 data = response.json()
                 
-                print(f"Alpha Vantage Daily response keys: {list(data.keys())}")  # Debug
-                print(f"Alpha Vantage Daily response: {data}")  # Debug
+                # Debug logs removed for security
                 
                 if "Time Series (Daily)" not in data:
                     if "Error Message" in data:
@@ -309,9 +333,9 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
                     elif "Note" in data:
                         raise Exception("API call frequency limit reached. Please try again later.")
                     elif "Information" in data:
-                        raise Exception(f"Alpha Vantage API limit: {data['Information']}")
+                        raise Exception(f"Alpha Vantage API limit reached for {symbol}")
                     else:
-                        raise Exception(f"Invalid Daily response from Alpha Vantage. Got keys: {list(data.keys())}")
+                        raise Exception(f"Invalid Daily response from Alpha Vantage for {symbol}")
                 
                 time_series = data["Time Series (Daily)"]
                 
@@ -367,7 +391,7 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
         return result_data
             
     except Exception as e:
-        raise Exception(f"Alpha Vantage history API error: {str(e)}")
+        raise Exception(f"Alpha Vantage history API error for {symbol}: Failed to fetch historical data")
 
 
 async def fetch_news_for_symbol(symbol: str, api_key: str = None):
@@ -467,8 +491,8 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                                         'content': article.get('content', '')[:500] if article.get('content') else ''
                                     })
                             
-            except Exception as search_error:
-                print(f"Error searching for {search_term}: {search_error}")
+            except Exception:
+                # Skip failed searches without logging sensitive error details
                 continue
         
         # Remove duplicates based on URL and limit to 10 most recent
@@ -481,7 +505,6 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
         
         # If no articles found with strict filtering, try broader search
         if not unique_articles:
-            print(f"No articles found with strict filtering for {symbol}, trying broader search...")
             try:
                 articles = newsapi.get_everything(
                     q=symbol,
@@ -507,8 +530,9 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                                 'content': article.get('content', '')[:500] if article.get('content') else ''
                             })
                             
-            except Exception as broad_search_error:
-                print(f"Broad search also failed for {symbol}: {broad_search_error}")
+            except Exception:
+                # Broad search failed - continue with empty results
+                pass
         
         return unique_articles
         
@@ -641,8 +665,8 @@ async def fetch_market_news(api_key: str = None, days_back: int = 1):
                                 'mentions': list(set(mentioned_symbols))  # Remove duplicates
                             })
                             
-            except Exception as search_error:
-                print(f"Error searching market news for {search_term}: {search_error}")
+            except Exception:
+                # Skip failed market news searches
                 continue
         
         # Remove duplicates and sort by publish date
@@ -734,7 +758,7 @@ Stock mentions in articles: {dict(list(stock_mentions.items())[:10])}
         )
         
         response_text = response.choices[0].message.content.strip()
-        print(f"OpenAI Market Analysis Response: {response_text}")  # Debug logging
+        # OpenAI response logging removed for security
         
         # Extract JSON if response has extra text
         if not response_text.startswith('{'):
@@ -759,9 +783,8 @@ Stock mentions in articles: {dict(list(stock_mentions.items())[:10])}
         
         return analysis
         
-    except json.JSONDecodeError as json_error:
-        print(f"JSON parsing error in market analysis: {json_error}")
-        print(f"Response was: {response_text}")
+    except json.JSONDecodeError:
+        # JSON parsing failed - use fallback analysis
         
         # Fallback analysis based on article data
         top_stocks = sorted(stock_mentions.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -846,7 +869,7 @@ News Articles:
             )
             
             response_text = response.choices[0].message.content.strip()
-            print(f"OpenAI Response for {symbol}: {response_text}")  # Debug logging
+            # OpenAI response logging removed for security
             
             # Try to extract JSON if response has extra text
             if not response_text.startswith('{'):
@@ -879,9 +902,8 @@ News Articles:
             analysis["article_count"] = len(articles)
             return analysis
             
-        except json.JSONDecodeError as json_error:
-            print(f"JSON parsing error for {symbol}: {json_error}")
-            print(f"Response was: {response_text}")
+        except json.JSONDecodeError:
+            # JSON parsing error - use fallback analysis
             
             # Create basic analysis from article titles
             titles = [article['title'] for article in articles[:3]]
@@ -897,20 +919,49 @@ News Articles:
     except Exception as e:
         raise Exception(f"OpenAI analysis error: {str(e)}")
 
+def validate_symbol(symbol: str) -> str:
+    """Validate and sanitize stock symbol"""
+    if not symbol or len(symbol) > 10:
+        raise ValueError("Invalid symbol length")
+    
+    # Remove any non-alphanumeric characters
+    clean_symbol = ''.join(c for c in symbol.upper() if c.isalnum())
+    
+    if not clean_symbol or len(clean_symbol) < 1:
+        raise ValueError("Invalid symbol format")
+    
+    return clean_symbol
+
 @app.get("/api/stock/{symbol}")
-async def get_stock_data(symbol: str):
+async def get_stock_data(symbol: str, request: Request):
+    # Rate limiting
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(client_ip, max_requests=30, window_minutes=1):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "Rate limit exceeded. Please try again later."}
+        )
+    
     try:
+        # Validate and sanitize symbol
+        clean_symbol = validate_symbol(symbol)
+        
         # Try Alpha Vantage first
         try:
-            return await fetch_alpha_vantage_stock(symbol.upper())
-        except Exception as alpha_error:
-            print(f"Alpha Vantage failed: {alpha_error}")
-            raise Exception(f"Failed to fetch data for {symbol}: {str(alpha_error)}")
+            return await fetch_alpha_vantage_stock(clean_symbol)
+        except Exception:
+            # Don't log the full error to avoid exposing sensitive details
+            raise Exception(f"Failed to fetch data for {clean_symbol}")
             
-    except Exception as e:
+    except ValueError as ve:
         return JSONResponse(
             status_code=400,
-            content={"error": f"Failed to fetch data for {symbol}: {str(e)}"}
+            content={"error": str(ve)}
+        )
+    except Exception:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Unable to fetch stock data"}
         )
 
 @app.get("/api/market/overview")
@@ -942,15 +993,18 @@ async def get_market_overview():
 async def get_news_insights(symbol: str):
     """Get AI-analyzed news insights for a stock symbol"""
     try:
+        # Validate and sanitize symbol
+        clean_symbol = validate_symbol(symbol)
+        
         # Fetch recent news articles
-        articles = await fetch_news_for_symbol(symbol.upper())
+        articles = await fetch_news_for_symbol(clean_symbol)
         
         # Analyze with OpenAI
-        analysis = await analyze_news_with_openai(articles, symbol.upper())
+        analysis = await analyze_news_with_openai(articles, clean_symbol)
         
         # Include raw articles for frontend display if needed
         response = {
-            "symbol": symbol.upper(),
+            "symbol": clean_symbol,
             "analysis": analysis,
             "raw_articles": articles[:5],  # First 5 articles for display
             "last_updated": datetime.now().isoformat()
@@ -958,16 +1012,24 @@ async def get_news_insights(symbol: str):
         
         return response
         
+    except ValueError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={"error": str(ve)}
+        )
     except Exception as e:
         return JSONResponse(
             status_code=400,
-            content={"error": f"Failed to fetch news insights for {symbol}: {str(e)}"}
+            content={"error": "Unable to fetch news insights"}
         )
 
 @app.get("/api/stock/{symbol}/history")
 async def get_stock_history(symbol: str, period: str = "1y"):
     """Get historical stock data for charting"""
     try:
+        # Validate and sanitize symbol
+        clean_symbol = validate_symbol(symbol)
+        
         # Validate period parameter
         valid_periods = ["1d", "1w", "3m", "1y"]
         if period not in valid_periods:
@@ -977,10 +1039,10 @@ async def get_stock_history(symbol: str, period: str = "1y"):
             )
         
         # Fetch historical data
-        history_data = await fetch_alpha_vantage_history(symbol.upper(), period)
+        history_data = await fetch_alpha_vantage_history(clean_symbol, period)
         
         response = {
-            "symbol": symbol.upper(),
+            "symbol": clean_symbol,
             "period": period,
             "data": history_data["data"],
             "data_points": len(history_data["data"]),
@@ -990,16 +1052,28 @@ async def get_stock_history(symbol: str, period: str = "1y"):
         
         return response
         
+    except ValueError as ve:
+        return JSONResponse(
+            status_code=400,
+            content={"error": str(ve)}
+        )
     except Exception as e:
         return JSONResponse(
             status_code=400,
-            content={"error": f"Failed to fetch historical data for {symbol}: {str(e)}"}
+            content={"error": "Unable to fetch historical data"}
         )
 
 @app.get("/api/market/insights")
 async def get_market_insights(days_back: int = 1):
     """Get AI-analyzed market insights and trending stocks from recent news"""
     try:
+        # Validate days_back parameter
+        if days_back < 1 or days_back > 7:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "days_back must be between 1 and 7"}
+            )
+        
         # Fetch recent market news
         articles = await fetch_market_news(days_back=days_back)
         
@@ -1016,10 +1090,10 @@ async def get_market_insights(days_back: int = 1):
         
         return response
         
-    except Exception as e:
+    except Exception:
         return JSONResponse(
             status_code=400,
-            content={"error": f"Failed to fetch market insights: {str(e)}"}
+            content={"error": "Unable to fetch market insights"}
         )
 
 if __name__ == "__main__":
