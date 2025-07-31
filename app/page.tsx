@@ -31,9 +31,9 @@ export default function Home() {
           <div className="mb-6">
             <h1 className="text-4xl font-bold text-slate-100 flex items-center justify-center mb-2">
               <TrendingUp className="w-10 h-10 mr-4 text-blue-400" />
-              Market Intelligence
+              MarketPulse
             </h1>
-            <p className="text-slate-400 text-lg">AI-powered financial insights and market analysis</p>
+            <p className="text-slate-400 text-lg">Real-time financial insights and market analysis</p>
           </div>
           
           {/* Centered Stock Search */}

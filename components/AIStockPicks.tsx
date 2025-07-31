@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Minus, Eye, Sparkles } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Eye, Star } from 'lucide-react'
 import { apiClient, type StockData } from '@/lib/api'
 import { formatCurrency, formatPercent } from '@/lib/utils'
 
@@ -99,7 +99,7 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
   return (
     <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6 mb-6">
       <div className="flex items-center mb-4">
-        <Sparkles className="w-6 h-6 mr-3 text-blue-400" />
+        <Star className="w-6 h-6 mr-3 text-blue-400" />
         <h2 className="text-xl font-semibold text-slate-100">Top Stock Picks</h2>
         <span className="ml-2 px-2 py-1 text-xs bg-blue-600/20 text-blue-400 rounded-full border border-blue-500/30">
           FEATURED
@@ -228,7 +228,7 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
       </div>
 
       <div className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-600 text-center">
-        AI-curated picks based on market trends and analysis • Click to view details
+Featured stocks based on market trends and analysis • Click to view details
       </div>
     </div>
   )

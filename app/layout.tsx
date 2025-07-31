@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Market Dashboard',
-  description: 'AI-Powered Financial Market Analysis Dashboard',
+  title: 'MarketPulse',
+  description: 'Real-time financial market analysis and insights platform',
 }
 
 export default function RootLayout({
