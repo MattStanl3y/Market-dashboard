@@ -234,6 +234,9 @@ export default function AIStockPicks({ onSymbolSelect }: AIStockPicksProps) {
 
       <div className="text-xs text-slate-400 mt-6 pt-4 border-t border-slate-600/50 text-center">
         <span className="bg-gradient-to-r from-blue-400 to-slate-300 bg-clip-text text-transparent font-medium">Curated picks</span> based on market trends • Click to explore
+        {stocks.some(stock => stock.data?.is_mock_data) && (
+          <span className="text-amber-400 ml-2">• Using mock data due to API limits</span>
+        )}
       </div>
     </div>
   )

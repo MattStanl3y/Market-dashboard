@@ -79,13 +79,18 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   return (
     <div className="bg-slate-800/60 backdrop-blur-sm rounded-lg shadow-lg border border-slate-600 p-6">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
+        <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-slate-100 flex items-center">
             <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mr-3">
               <span className="text-white text-sm font-bold">AI</span>
             </div>
             AI Insights
           </h2>
+          {insights?.is_mock_data && (
+            <div className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full border border-amber-500/30">
+              API Limit - Mock Data
+            </div>
+          )}
         </div>
         <button
           onClick={fetchInsights}

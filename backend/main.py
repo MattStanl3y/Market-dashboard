@@ -132,6 +132,217 @@ async def fetch_alpha_vantage_overview(symbol: str, api_key: str = None):
         raise Exception(f"Alpha Vantage overview API error for {symbol}: Failed to fetch company data")
 
 
+def generate_mock_historical_data(symbol: str, period: str = "1y"):
+    """Generate realistic mock historical chart data when Alpha Vantage is unavailable"""
+    import random
+    from datetime import datetime, timedelta
+    
+    # Get base price from our mock stock data
+    base_data = get_mock_stock_data(symbol)
+    base_price = base_data['current_price']
+    
+    # Determine date range and interval based on period
+    end_date = datetime.now()
+    if period == "1d":
+        start_date = end_date - timedelta(days=1)
+        # For 1D, use 30-minute intervals during trading hours
+        intervals = []
+        current = start_date.replace(hour=9, minute=30, second=0, microsecond=0)
+        while current <= end_date.replace(hour=16, minute=0):
+            intervals.append(current)
+            current += timedelta(minutes=30)
+    elif period == "1w":
+        start_date = end_date - timedelta(days=7)
+        intervals = [(start_date + timedelta(days=i)) for i in range(8)]
+    elif period == "3m":
+        start_date = end_date - timedelta(days=90)
+        intervals = [(start_date + timedelta(days=i*3)) for i in range(31)]
+    else:  # 1y
+        start_date = end_date - timedelta(days=365)
+        intervals = [(start_date + timedelta(days=i*7)) for i in range(53)]
+    
+    # Generate realistic price movement
+    data = []
+    current_price = base_price * 0.95  # Start slightly lower than current
+    
+    # Calculate volatility based on period (shorter periods = less volatility)
+    volatility = {
+        "1d": 0.01,    # 1% daily volatility
+        "1w": 0.02,    # 2% weekly volatility  
+        "3m": 0.03,    # 3% quarterly volatility
+        "1y": 0.04     # 4% yearly volatility
+    }.get(period, 0.03)
+    
+    for i, date in enumerate(intervals):
+        # Random walk with slight upward trend
+        change = random.gauss(0.001, volatility)  # Slight positive drift
+        current_price *= (1 + change)
+        
+        # Add some realistic daily variation
+        daily_high = current_price * (1 + random.uniform(0, volatility/2))
+        daily_low = current_price * (1 - random.uniform(0, volatility/2))
+        open_price = current_price * (1 + random.uniform(-volatility/4, volatility/4))
+        
+        # Generate volume (higher volume on bigger price moves)
+        volume_base = random.randint(20000000, 60000000)
+        volume_multiplier = 1 + abs(change) * 10
+        volume = int(volume_base * volume_multiplier)
+        
+        data.append({
+            "date": date.strftime("%Y-%m-%d %H:%M:%S") if period == "1d" else date.strftime("%Y-%m-%d"),
+            "open": round(open_price, 2),
+            "high": round(daily_high, 2),
+            "low": round(daily_low, 2),
+            "close": round(current_price, 2),
+            "volume": volume
+        })
+    
+    # Calculate period high/low
+    period_high = max(item['high'] for item in data)
+    period_low = min(item['low'] for item in data)
+    
+    return {
+        "data": data,
+        "period_high": period_high,
+        "period_low": period_low,
+        "is_mock_data": True  # Flag to indicate this is mock data
+    }
+
+
+def get_mock_stock_data(symbol: str):
+    """Get realistic mock stock data for featured picks when API is unavailable"""
+    import random
+    
+    # Base data for different symbols with realistic market caps and sectors
+    mock_data = {
+        'AAPL': {
+            'company_name': 'Apple Inc.',
+            'base_price': 185.0,
+            'sector': 'Technology',
+            'industry': 'Consumer Electronics',
+            'market_cap': 2800000000000,
+            'pe_ratio': 28.5,
+            'description': 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.'
+        },
+        'TSLA': {
+            'company_name': 'Tesla, Inc.',
+            'base_price': 248.0,
+            'sector': 'Consumer Cyclical',
+            'industry': 'Auto Manufacturers',
+            'market_cap': 780000000000,
+            'pe_ratio': 65.2,
+            'description': 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.'
+        },
+        'NVDA': {
+            'company_name': 'NVIDIA Corporation',
+            'base_price': 875.0,
+            'sector': 'Technology',
+            'industry': 'Semiconductors',
+            'market_cap': 2150000000000,
+            'pe_ratio': 45.8,
+            'description': 'NVIDIA Corporation operates as a computing company in the United States and internationally.'
+        },
+        'MSFT': {
+            'company_name': 'Microsoft Corporation',
+            'base_price': 420.0,
+            'sector': 'Technology',
+            'industry': 'Software—Infrastructure',
+            'market_cap': 3100000000000,
+            'pe_ratio': 32.1,
+            'description': 'Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide.'
+        },
+        'GOOGL': {
+            'company_name': 'Alphabet Inc.',
+            'base_price': 165.0,
+            'sector': 'Communication Services',
+            'industry': 'Internet Content & Information',
+            'market_cap': 2050000000000,
+            'pe_ratio': 25.4,
+            'description': 'Alphabet Inc. provides various products and services in the United States, international markets, and China.'
+        },
+        'AMZN': {
+            'company_name': 'Amazon.com, Inc.',
+            'base_price': 145.0,
+            'sector': 'Consumer Cyclical',
+            'industry': 'Internet Retail',
+            'market_cap': 1500000000000,
+            'pe_ratio': 48.7,
+            'description': 'Amazon.com, Inc. engages in the retail sale of consumer products and subscriptions in North America and internationally.'
+        },
+        'META': {
+            'company_name': 'Meta Platforms, Inc.',
+            'base_price': 485.0,
+            'sector': 'Communication Services',
+            'industry': 'Internet Content & Information',
+            'market_cap': 1200000000000,
+            'pe_ratio': 26.8,
+            'description': 'Meta Platforms, Inc. develops products that enable people to connect and share with friends and family through mobile devices, personal computers, virtual reality headsets, and wearables worldwide.'
+        },
+        'NFLX': {
+            'company_name': 'Netflix, Inc.',
+            'base_price': 485.0,
+            'sector': 'Communication Services',
+            'industry': 'Entertainment',
+            'market_cap': 210000000000,
+            'pe_ratio': 42.3,
+            'description': 'Netflix, Inc. provides entertainment services. It offers TV series, documentaries, feature films, and mobile games across a wide variety of genres and languages.'
+        }
+    }
+    
+    # Get base data or create generic data for unknown symbols
+    base = mock_data.get(symbol, {
+        'company_name': f'{symbol} Inc.',
+        'base_price': 120.0,
+        'sector': 'Technology',
+        'industry': 'Software',
+        'market_cap': 50000000000,
+        'pe_ratio': 25.0,
+        'description': f'{symbol} is a publicly traded company.'
+    })
+    
+    # Add some realistic random variation to price (±5%)
+    price_variation = random.uniform(-0.05, 0.05)
+    current_price = base['base_price'] * (1 + price_variation)
+    
+    # Calculate change based on price variation
+    change = current_price - base['base_price']
+    change_percent = (change / base['base_price']) * 100
+    
+    # Generate realistic volume
+    volume = random.randint(15000000, 85000000)
+    
+    # Generate realistic dividend info (add fake dividends for demo purposes)
+    dividend_yield = 0
+    dividend_per_share = 0
+    # Include more stocks with fake dividends for better demo experience
+    if symbol in ['AAPL', 'MSFT', 'JNJ', 'KO', 'PG', 'NVDA', 'GOOGL', 'META', 'AMZN']:
+        dividend_yield = round(random.uniform(1.2, 3.8), 2)
+        dividend_per_share = round((current_price * dividend_yield / 100) / 4, 2)  # Quarterly dividend
+
+    return {
+        'symbol': symbol,
+        'company_name': base['company_name'],
+        'current_price': round(current_price, 2),
+        'change': round(change, 2),
+        'change_percent': round(change_percent, 2),
+        'volume': volume,
+        'market_cap': base['market_cap'],
+        'pe_ratio': base['pe_ratio'],
+        'sector': base['sector'],
+        'industry': base['industry'],
+        'description': base['description'],
+        '52_week_high': round(current_price * 1.25, 2),
+        '52_week_low': round(current_price * 0.75, 2),
+        'eps': round(current_price / base['pe_ratio'], 2),
+        'beta': round(random.uniform(0.8, 2.2), 2),
+        'dividend_yield': dividend_yield,
+        'dividend_per_share': dividend_per_share,
+        'peg_ratio': round(random.uniform(1.0, 3.0), 2),
+        'book_value': round(current_price * random.uniform(0.15, 0.35), 2),
+        'is_mock_data': True  # Flag to indicate this is mock data
+    }
+
+
 async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
     """Fetch stock data from Alpha Vantage API"""
     import httpx
@@ -222,7 +433,13 @@ async def fetch_alpha_vantage_stock(symbol: str, api_key: str = None):
             return result
             
     except Exception as e:
-        raise Exception(f"Alpha Vantage API error for {symbol}: Failed to fetch stock data")
+        # If Alpha Vantage fails (rate limited, etc.), return mock data for featured picks
+        error_msg = str(e).lower()
+        if any(term in error_msg for term in ['rate limit', 'api limit', 'frequency', 'api call']):
+            # Return mock data when rate limited
+            return get_mock_stock_data(symbol)
+        else:
+            raise Exception(f"Alpha Vantage API error for {symbol}: Failed to fetch stock data")
 
 
 async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: str = None):
@@ -391,7 +608,13 @@ async def fetch_alpha_vantage_history(symbol: str, period: str = "1y", api_key: 
         return result_data
             
     except Exception as e:
-        raise Exception(f"Alpha Vantage history API error for {symbol}: Failed to fetch historical data")
+        # If Alpha Vantage historical API fails, return mock chart data
+        error_msg = str(e).lower()
+        if any(term in error_msg for term in ['rate limit', 'api limit', 'frequency', 'api call']):
+            # Return mock historical data when rate limited
+            return generate_mock_historical_data(symbol, period)
+        else:
+            raise Exception(f"Alpha Vantage history API error for {symbol}: Failed to fetch historical data")
 
 
 async def fetch_news_for_symbol(symbol: str, api_key: str = None):
@@ -428,7 +651,12 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
             ]
     
     try:
-        newsapi = NewsApiClient(api_key=api_key)
+        # Try to initialize NewsAPI client - this might fail if key is invalid
+        try:
+            newsapi = NewsApiClient(api_key=api_key)
+        except Exception as init_error:
+            # If NewsAPI client initialization fails, fall back to mock data
+            raise Exception("NewsAPI initialization failed")
         
         # Get news from last 7 days
         to_date = datetime.now()
@@ -467,6 +695,13 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                     domains=','.join(financial_domains)
                 )
                 
+                # Check for rate limiting or API errors
+                if isinstance(articles, dict) and articles.get('status') == 'error':
+                    if articles.get('code') == 'rateLimited':
+                        raise Exception("NewsAPI rate limit exceeded")
+                    else:
+                        continue
+                
                 if articles.get('articles'):
                     for article in articles['articles']:
                         title = article.get('title', '').lower()
@@ -491,8 +726,11 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                                         'content': article.get('content', '')[:500] if article.get('content') else ''
                                     })
                             
-            except Exception:
-                # Skip failed searches without logging sensitive error details
+            except Exception as e:
+                # Check if it's a rate limit error - if so, break and use fallback
+                if "rate limit" in str(e).lower() or "rateLimited" in str(e):
+                    raise Exception("NewsAPI rate limit exceeded")
+                # Otherwise skip failed searches
                 continue
         
         # Remove duplicates based on URL and limit to 10 most recent
@@ -515,6 +753,13 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                     page_size=5
                 )
                 
+                # Check for rate limiting or API errors
+                if isinstance(articles, dict) and articles.get('status') == 'error':
+                    if articles.get('code') == 'rateLimited':
+                        raise Exception("NewsAPI rate limit exceeded")
+                    else:
+                        pass  # Continue with empty results
+                
                 if articles.get('articles'):
                     for article in articles['articles']:
                         title = article.get('title', '').lower()
@@ -530,14 +775,46 @@ async def fetch_news_for_symbol(symbol: str, api_key: str = None):
                                 'content': article.get('content', '')[:500] if article.get('content') else ''
                             })
                             
-            except Exception:
-                # Broad search failed - continue with empty results
+            except Exception as e:
+                # Check if it's a rate limit error - if so, propagate
+                if "rate limit" in str(e).lower() or "rateLimited" in str(e):
+                    raise Exception("NewsAPI rate limit exceeded")
+                # Otherwise continue with empty results
                 pass
         
         return unique_articles
         
     except Exception as e:
-        raise Exception(f"News API error: {str(e)}")
+        # If rate limited, return mock data for the symbol
+        if "rate limit" in str(e).lower() or "rateLimited" in str(e):
+            return [
+                {
+                    "title": f"{symbol} Reports Strong Quarterly Earnings",
+                    "description": f"{symbol} exceeded analyst expectations with robust revenue growth and positive outlook for next quarter.",
+                    "url": "https://example.com/mock-news-1",
+                    "published_at": "2024-01-20T10:30:00Z",
+                    "source": "Financial Times",
+                    "content": f"Company {symbol} demonstrated strong performance in recent quarterly results..."
+                },
+                {
+                    "title": f"Analysts Upgrade {symbol} Price Target",
+                    "description": f"Major investment banks raise price targets for {symbol} citing strong fundamentals and market position.",
+                    "url": "https://example.com/mock-news-2", 
+                    "published_at": "2024-01-19T14:15:00Z",
+                    "source": "Reuters",
+                    "content": f"Several analysts have revised their outlook on {symbol} following recent developments..."
+                },
+                {
+                    "title": f"{symbol} Announces Strategic Partnership",
+                    "description": f"{symbol} enters new strategic alliance expected to drive future growth and market expansion.",
+                    "url": "https://example.com/mock-news-3",
+                    "published_at": "2024-01-18T09:45:00Z", 
+                    "source": "Bloomberg",
+                    "content": f"The partnership between {symbol} and industry leaders signals strong growth potential..."
+                }
+            ]
+        else:
+            raise Exception(f"News API error: {str(e)}")
 
 
 async def fetch_market_news(api_key: str = None, days_back: int = 1):
@@ -595,7 +872,12 @@ async def fetch_market_news(api_key: str = None, days_back: int = 1):
             ]
     
     try:
-        newsapi = NewsApiClient(api_key=api_key)
+        # Try to initialize NewsAPI client - this might fail if key is invalid
+        try:
+            newsapi = NewsApiClient(api_key=api_key)
+        except Exception as init_error:
+            # If NewsAPI client initialization fails, fall back to mock data
+            raise Exception("NewsAPI initialization failed")
         
         # Get news from specified days back
         to_date = datetime.now()
@@ -626,6 +908,15 @@ async def fetch_market_news(api_key: str = None, days_back: int = 1):
                     page_size=15,
                     domains='reuters.com,bloomberg.com,wsj.com,marketwatch.com,cnbc.com,yahoo.com,benzinga.com,forbes.com,barrons.com'
                 )
+                
+                # Check for rate limiting or API errors
+                if isinstance(articles, dict) and articles.get('status') == 'error':
+                    if articles.get('code') == 'rateLimited':
+                        # Hit rate limit - fall back to mock data
+                        raise Exception("NewsAPI rate limit exceeded")
+                    else:
+                        # Other API error - continue with other searches
+                        continue
                 
                 if articles.get('articles'):
                     for article in articles['articles']:
@@ -665,8 +956,11 @@ async def fetch_market_news(api_key: str = None, days_back: int = 1):
                                 'mentions': list(set(mentioned_symbols))  # Remove duplicates
                             })
                             
-            except Exception:
-                # Skip failed market news searches
+            except Exception as e:
+                # Check if it's a rate limit error - if so, break and use fallback
+                if "rate limit" in str(e).lower() or "rateLimited" in str(e):
+                    raise Exception("NewsAPI rate limit exceeded")
+                # Otherwise skip failed searches
                 continue
         
         # Remove duplicates and sort by publish date
@@ -680,7 +974,105 @@ async def fetch_market_news(api_key: str = None, days_back: int = 1):
         return unique_articles
         
     except Exception as e:
-        raise Exception(f"Market news API error: {str(e)}")
+        # If rate limited or other API error, return mock data
+        if "rate limit" in str(e).lower() or "rateLimited" in str(e) or "initialization failed" in str(e).lower():
+            # Return realistic mock market news when API is unavailable
+            now = datetime.now()
+            
+            return [
+                {
+                    "title": "Tech Stocks Rally as AI Spending Drives Growth",
+                    "description": "Major technology companies see stock prices surge amid increased investment in artificial intelligence infrastructure and services.",
+                    "url": "https://example.com/tech-rally",
+                    "published_at": (now - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Reuters",
+                    "content": "Technology stocks continued their upward momentum as companies report strong AI-related revenue growth...",
+                    "mentions": ["NVDA", "MSFT", "GOOGL", "META"]
+                },
+                {
+                    "title": "Federal Reserve Maintains Interest Rates Amid Economic Uncertainty",
+                    "description": "The Federal Reserve keeps interest rates steady while monitoring inflation trends and employment data.",
+                    "url": "https://example.com/fed-rates",
+                    "published_at": (now - timedelta(hours=4)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Wall Street Journal",
+                    "content": "The Federal Reserve announced its decision to maintain current interest rates...",
+                    "mentions": ["SPY", "QQQ", "DJI"]
+                },
+                {
+                    "title": "Electric Vehicle Sales Surge Despite Market Headwinds",
+                    "description": "EV manufacturers report strong quarterly deliveries as consumer adoption accelerates globally.",
+                    "url": "https://example.com/ev-sales",
+                    "published_at": (now - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Bloomberg",
+                    "content": "Electric vehicle sales continue to outpace traditional auto sales...",
+                    "mentions": ["TSLA", "RIVN", "LCID", "NIO"]
+                },
+                {
+                    "title": "Energy Sector Gains on Rising Oil Prices",
+                    "description": "Oil and gas companies see stock gains as crude prices climb amid supply concerns and geopolitical tensions.",
+                    "url": "https://example.com/energy-gains",
+                    "published_at": (now - timedelta(hours=8)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "CNBC",
+                    "content": "Energy stocks surged as oil prices reached new monthly highs...",
+                    "mentions": ["XOM", "CVX", "COP", "EOG"]
+                },
+                {
+                    "title": "Healthcare Stocks Mixed on Drug Approval News",
+                    "description": "Pharmaceutical companies show varied performance following FDA approvals and clinical trial results.",
+                    "url": "https://example.com/healthcare-mixed",
+                    "published_at": (now - timedelta(hours=10)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "MarketWatch",
+                    "content": "Healthcare sector shows mixed results with some major drug approvals...",
+                    "mentions": ["JNJ", "PFE", "MRNA", "ABBV"]
+                },
+                {
+                    "title": "Streaming Wars Heat Up as Disney+ Subscriber Growth Slows",
+                    "description": "Media companies face increased competition in streaming market as growth rates moderate across platforms.",
+                    "url": "https://example.com/streaming-wars",
+                    "published_at": (now - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Forbes",
+                    "content": "The streaming market becomes increasingly competitive as subscriber growth slows...",
+                    "mentions": ["DIS", "NFLX", "WBD", "PARA"]
+                },
+                {
+                    "title": "Banking Sector Faces Regulatory Scrutiny on Climate Risk",
+                    "description": "Major banks prepare for new climate-related stress tests as regulators increase focus on environmental risks.",
+                    "url": "https://example.com/banking-climate",
+                    "published_at": (now - timedelta(hours=14)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Financial Times",
+                    "content": "Banking regulators are implementing new climate risk assessment requirements...",
+                    "mentions": ["JPM", "BAC", "WFC", "C"]
+                },
+                {
+                    "title": "Semiconductor Stocks Volatile on China Trade Concerns",
+                    "description": "Chip manufacturers face uncertainty as trade tensions and export restrictions impact global supply chains.",
+                    "url": "https://example.com/semiconductor-trade",
+                    "published_at": (now - timedelta(hours=16)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Benzinga",
+                    "content": "Semiconductor companies navigate complex trade environment...",
+                    "mentions": ["NVDA", "AMD", "INTC", "TSM"]
+                },
+                {
+                    "title": "Retail Earnings Season Shows Consumer Resilience",
+                    "description": "Major retailers report better-than-expected results as consumers continue spending despite economic pressures.",
+                    "url": "https://example.com/retail-earnings",
+                    "published_at": (now - timedelta(hours=18)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "Yahoo Finance",
+                    "content": "Retail earnings demonstrate ongoing consumer strength...",
+                    "mentions": ["WMT", "AMZN", "TGT", "COST"]
+                },
+                {
+                    "title": "Gold Prices Reach New Highs Amid Market Uncertainty",
+                    "description": "Precious metals surge as investors seek safe-haven assets during volatile market conditions.",
+                    "url": "https://example.com/gold-highs",  
+                    "published_at": (now - timedelta(hours=20)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "source": "MarketWatch",
+                    "content": "Gold prices continue climbing as uncertainty drives safe-haven demand...",
+                    "mentions": ["GLD", "GOLD", "AEM", "NEM"]
+                }
+            ]
+        else:
+            raise Exception(f"Market news API error: {str(e)}")
 
 
 async def analyze_market_trends_with_openai(articles: list, api_key: str = None):
@@ -1002,12 +1394,16 @@ async def get_news_insights(symbol: str):
         # Analyze with OpenAI
         analysis = await analyze_news_with_openai(articles, clean_symbol)
         
+        # Check if we're using mock data (first article has example.com URL)
+        is_mock_data = len(articles) > 0 and "example.com" in articles[0].get("url", "")
+        
         # Include raw articles for frontend display if needed
         response = {
             "symbol": clean_symbol,
             "analysis": analysis,
             "raw_articles": articles[:5],  # First 5 articles for display
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
+            "is_mock_data": is_mock_data
         }
         
         return response
@@ -1047,7 +1443,8 @@ async def get_stock_history(symbol: str, period: str = "1y"):
             "data": history_data["data"],
             "data_points": len(history_data["data"]),
             "period_high": history_data["period_high"],
-            "period_low": history_data["period_low"]
+            "period_low": history_data["period_low"],
+            "is_mock_data": history_data.get("is_mock_data", False)
         }
         
         return response
@@ -1080,12 +1477,16 @@ async def get_market_insights(days_back: int = 1):
         # Analyze with OpenAI to extract trends and insights
         analysis = await analyze_market_trends_with_openai(articles)
         
+        # Check if we're using mock data (first article has example.com URL)
+        is_mock_data = len(articles) > 0 and "example.com" in articles[0].get("url", "")
+        
         # Include raw articles for frontend display
         response = {
             "analysis": analysis,
             "raw_articles": articles[:10],  # First 10 articles for display
             "last_updated": datetime.now().isoformat(),
-            "days_back": days_back
+            "days_back": days_back,
+            "is_mock_data": is_mock_data
         }
         
         return response

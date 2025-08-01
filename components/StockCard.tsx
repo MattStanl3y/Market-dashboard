@@ -78,7 +78,14 @@ export default function StockCard({ data, period = '1y', chartData, loading = fa
     <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl p-6 border border-slate-700/50">
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-100">{data.symbol}</h2>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-2xl font-bold text-slate-100">{data.symbol}</h2>
+            {data.is_mock_data && (
+              <div className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full border border-amber-500/30">
+                Mock
+              </div>
+            )}
+          </div>
           <p className="text-slate-300 text-sm">{data.company_name}</p>
         </div>
         <div className={`flex items-center px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm ${
@@ -148,7 +155,7 @@ export default function StockCard({ data, period = '1y', chartData, loading = fa
         {data.dividend_yield && data.dividend_yield > 0 && (
           <div>
             <p className="text-sm text-slate-400">Dividend Yield</p>
-            <p className="font-semibold text-slate-100">{(data.dividend_yield * 100).toFixed(2)}%</p>
+            <p className="font-semibold text-slate-100">{data.dividend_yield.toFixed(2)}%</p>
           </div>
         )}
         {data.peg_ratio && (

@@ -22,6 +22,7 @@ export interface StockData {
   sector?: string
   industry?: string
   description?: string
+  is_mock_data?: boolean
 }
 
 export interface MarketOverview {
@@ -56,6 +57,7 @@ export interface NewsInsights {
   analysis: NewsAnalysis
   raw_articles: NewsArticle[]
   last_updated: string
+  is_mock_data?: boolean
 }
 
 export interface ChartDataPoint {
@@ -74,6 +76,7 @@ export interface HistoricalData {
   data_points: number
   period_high: number
   period_low: number
+  is_mock_data?: boolean
 }
 
 export interface TrendingStock {
@@ -103,6 +106,7 @@ export interface MarketInsights {
   raw_articles: NewsArticle[]
   last_updated: string
   days_back: number
+  is_mock_data?: boolean
 }
 
 class ApiClient {
@@ -130,7 +134,8 @@ class ApiClient {
       beta: 2.11,
       sector: 'Consumer Cyclical',
       industry: 'Auto Manufacturers',
-      description: 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.'
+      description: 'Tesla, Inc. designs, develops, manufactures, leases, and sells electric vehicles, and energy generation and storage systems.',
+      is_mock_data: true
     }
   }
 

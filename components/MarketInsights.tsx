@@ -129,8 +129,15 @@ export default function MarketInsightsComponent({ onSymbolSelect }: MarketInsigh
                 <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
                 Latest Market News
               </h2>
-              <div className="text-xs text-slate-400 bg-slate-700/50 px-3 py-1 rounded-full">
-                Live Updates
+              <div className="flex items-center gap-2">
+                {insights.is_mock_data && (
+                  <div className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded-full border border-amber-500/30">
+                    API Limit - Mock Data
+                  </div>
+                )}
+                <div className="text-xs text-slate-400 bg-slate-700/50 px-3 py-1 rounded-full">
+                  Live Updates
+                </div>
               </div>
             </div>
             
